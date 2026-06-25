@@ -148,9 +148,12 @@ endpointConfiguration.EnableEndpointHeartbeat(heartbeat =>
 - If the pump stalls, no heartbeat is processed, the timestamp ages past
   `StaleAfter`, and the health check reports the endpoint unhealthy.
 - Staleness is evaluated against an injectable `TimeProvider` (so it is unit
-  testable). When scanning is disabled the handler is registered explicitly via
-  `AddHandler<T>()`; when enabled it is discovered, so it is not registered
-  twice.
+  testable).
+- The heartbeat handler is **always** registered explicitly via `AddHandler<T>()`,
+  so it works whether or not the user enables assembly scanning (and regardless of
+  when they toggle it). When scanning is also on, NServiceBus discovers the same
+  handler, but registration is deduplicated by (handler type, message type), so a
+  heartbeat is never handled twice.
 
 ### Health check
 

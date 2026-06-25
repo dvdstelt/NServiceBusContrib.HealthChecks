@@ -27,13 +27,11 @@ public static class HeartbeatConfigurationExtensions
 
         endpointConfiguration.EnableFeature<EndpointHeartbeatFeature>();
 
-        // With scanning disabled (the multi-endpoint case) the handler is not discovered, so
-        // register it explicitly. With scanning enabled it is found automatically; registering
-        // it again would make every heartbeat be handled twice.
-        if (endpointConfiguration.AssemblyScanner().Disable)
-        {
-            endpointConfiguration.AddHandler<EndpointHeartbeatHandler>();
-        }
+        // Always register the handler explicitly so heartbeats are handled whether or not the
+        // user enables assembly scanning, and regardless of when they toggle it. When scanning
+        // is also on, NServiceBus discovers the same handler, but registration is deduplicated
+        // by (handler type, message type), so the heartbeat is never handled twice.
+        endpointConfiguration.AddHandler<EndpointHeartbeatHandler>();
 
         return endpointConfiguration;
     }

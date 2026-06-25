@@ -9,22 +9,29 @@ namespace NServiceBusContrib.WarmUp.Tests;
 
 public class HeartbeatIntegrationTests
 {
-    [Fact]
-    public async Task Heartbeats_are_sent_and_processed_keeping_the_endpoint_live()
+    [Theory]
+    [InlineData(true)]   // multi-endpoint scenario: handler registered explicitly
+    [InlineData(false)]  // scanning on: handler also discovered, registration is deduplicated
+    public async Task Heartbeats_are_sent_and_processed_keeping_the_endpoint_live(bool disableScanning)
     {
         var storage = Path.Combine(Path.GetTempPath(), "nsbcontrib-heartbeat", Guid.NewGuid().ToString("N"));
         var registry = new CountingStatusRegistry();
+        var endpointName = $"HeartbeatContrib.Liveness{(disableScanning ? "NoScan" : "Scan")}";
 
         var builder = Host.CreateApplicationBuilder();
         // Pre-register the registry so it wins over the default the packages would add.
         builder.Services.AddSingleton<IEndpointStatusRegistry>(registry);
 
-        var endpoint = new EndpointConfiguration("HeartbeatContrib.LivenessTest");
+        var endpoint = new EndpointConfiguration(endpointName);
         endpoint.UseTransport(new LearningTransport { StorageDirectory = storage });
         endpoint.UseSerialization<SystemJsonSerializer>();
         endpoint.SendFailedMessagesTo("error");
         endpoint.EnableInstallers();
-        endpoint.AssemblyScanner().Disable = true;   // multi-endpoint scenario: handler registered explicitly
+        if (disableScanning)
+        {
+            endpoint.AssemblyScanner().Disable = true;
+        }
+
         endpoint.WarmUp();
         endpoint.EnableEndpointHeartbeat(heartbeat =>
         {
@@ -45,7 +52,7 @@ public class HeartbeatIntegrationTests
 
             Assert.True(registry.HeartbeatCount >= 2, $"expected at least 2 heartbeats, observed {registry.HeartbeatCount}");
             Assert.Contains(registry.GetAll(), e =>
-                e.EndpointName == "HeartbeatContrib.LivenessTest" && e.State == EndpointReadinessState.Ready);
+                e.EndpointName == endpointName && e.State == EndpointReadinessState.Ready);
         }
         finally
         {
