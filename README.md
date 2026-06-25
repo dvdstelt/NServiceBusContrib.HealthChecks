@@ -19,6 +19,17 @@ dotnet build
 dotnet test
 ```
 
+## Add-ons
+
+| Package | Description |
+| ------- | ----------- |
+| [`NServiceBusContrib.WarmUp`](src/NServiceBusContrib.WarmUp) | Block message processing until user-defined warm-up actions complete. |
+| [`NServiceBusContrib.HealthCheck`](src/NServiceBusContrib.HealthCheck) | Aggregate the readiness of every endpoint in the process into one `/health` check. |
+
+See [`docs/warm-up-and-health.md`](docs/warm-up-and-health.md) for the design, and
+[`docs/ideas.md`](docs/ideas.md) for the backlog.
+
 ## Status
 
-Early days. See [`docs/ideas.md`](docs/ideas.md) for the backlog of add-on ideas.
+Early days. The warm-up and health-check add-ons are at phase 1 (readiness);
+heartbeat-based liveness is planned for phase 2.

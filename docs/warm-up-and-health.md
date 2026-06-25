@@ -83,17 +83,22 @@ For hosts that prefer to register everything against the service collection:
 builder.Services.AddNServiceBusWarmUpTask<PrimeConnectionPoolTask>("Sales");
 ```
 
-The feature still has to be enabled on the endpoint (see note on assembly
-scanning below); these DI-registered tasks are then picked up and run alongside
-any configured inline. `config.WarmUp()` (no argument) enables the feature for
-the endpoint without configuring inline actions.
+The feature still has to be enabled on the endpoint; these DI-registered tasks
+are then picked up and run alongside any configured inline. `config.WarmUp()`
+(no argument) enables the feature for the endpoint without configuring inline
+actions.
 
-### Assembly scanning note
+### Enabling and assembly scanning
 
-The warm-up `Feature` is `EnableByDefault`, so single-endpoint hosts with
-assembly scanning on get it automatically. Multi-endpoint hosts (like
-`OmNomNom.AllInOne`) disable assembly scanning, so the feature must be enabled
-explicitly via `config.WarmUp(...)` / `config.WarmUp()` on each endpoint.
+The warm-up `Feature` is enabled explicitly from `config.WarmUp(...)` via
+`EnableFeature<WarmUpFeature>()` (this is the pattern NServiceBus 11 will
+require; `EnableByDefault` is being retired). Because `EnableFeature<T>()` adds
+the feature directly rather than relying on discovery, it works whether or not
+assembly scanning is enabled, so multi-endpoint hosts (like
+`OmNomNom.AllInOne`) that disable scanning are fully supported. The trade-off is
+that warm-up is opt-in per endpoint: an endpoint that never calls
+`config.WarmUp(...)`/`config.WarmUp()` gets no warm-up and is not tracked for
+readiness.
 
 ## NServiceBusContrib.HealthCheck
 

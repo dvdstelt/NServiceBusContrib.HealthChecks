@@ -8,4 +8,20 @@
     <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Release'">true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Shared NuGet package metadata for the add-on projects. -->
+  <PropertyGroup>
+    <Authors>Dennis van der Stelt</Authors>
+    <PackageProjectUrl>https://github.com/dvdstelt/NServiceBusContrib</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dvdstelt/NServiceBusContrib</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 </Project>
