@@ -14,9 +14,9 @@ backlog live under `docs/`.
 - Nullable reference types enabled; use current C# language features.
 - Follow [SemVer](https://semver.org/) for package versions.
 - Keep each add-on self-contained: one project per package, named
-  `NServiceBus.Contrib.<AddonName>`.
-- Add a test project (`NServiceBus.Contrib.<AddonName>.Tests`) alongside each
-  add-on.
+  `NServiceBusContrib.<AddonName>`.
+- Add a test project (`NServiceBusContrib.<AddonName>.Tests`) under `tests/`
+  for each add-on.
 
 ## Build & test
 
