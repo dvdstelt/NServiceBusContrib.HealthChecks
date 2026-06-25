@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using NServiceBus;
 using NServiceBus.Configuration.AdvancedExtensibility;
 
@@ -13,8 +12,6 @@ public static class HeartbeatConfigurationExtensions
     /// registry. If the pump stops processing, the heartbeat goes stale and the health check
     /// reports the endpoint unhealthy.
     /// </summary>
-    [UnconditionalSuppressMessage("Trimming", "IL2026",
-        Justification = "The heartbeat handler type is referenced directly and is preserved.")]
     public static EndpointConfiguration EnableEndpointHeartbeat(
         this EndpointConfiguration endpointConfiguration,
         Action<HeartbeatOptions>? configure = null)
@@ -27,10 +24,11 @@ public static class HeartbeatConfigurationExtensions
 
         endpointConfiguration.EnableFeature<EndpointHeartbeatFeature>();
 
-        // Always register the handler explicitly so heartbeats are handled whether or not the
-        // user enables assembly scanning, and regardless of when they toggle it. When scanning
-        // is also on, NServiceBus discovers the same handler, but registration is deduplicated
-        // by (handler type, message type), so the heartbeat is never handled twice.
+        // EndpointHeartbeatHandler is a [Handler] (NServiceBus 10.2 source-generated handler), so
+        // it does not implement IHandleMessages and is invisible to assembly scanning. The source
+        // generator intercepts this AddHandler<T>() call and rewrites it to the generated, trim-safe
+        // registration. Registering here means heartbeats work regardless of the user's scanning
+        // setting, with no risk of double registration.
         endpointConfiguration.AddHandler<EndpointHeartbeatHandler>();
 
         return endpointConfiguration;

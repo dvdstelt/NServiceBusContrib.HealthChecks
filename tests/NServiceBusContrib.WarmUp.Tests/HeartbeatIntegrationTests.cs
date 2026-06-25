@@ -10,8 +10,8 @@ namespace NServiceBusContrib.WarmUp.Tests;
 public class HeartbeatIntegrationTests
 {
     [Theory]
-    [InlineData(true)]   // multi-endpoint scenario: handler registered explicitly
-    [InlineData(false)]  // scanning on: handler also discovered, registration is deduplicated
+    [InlineData(true)]   // multi-endpoint scenario: assembly scanning disabled
+    [InlineData(false)]  // scanning on: the [Handler] is still registered via the interceptor, not scanning
     public async Task Heartbeats_are_sent_and_processed_keeping_the_endpoint_live(bool disableScanning)
     {
         var storage = Path.Combine(Path.GetTempPath(), "nsbcontrib-heartbeat", Guid.NewGuid().ToString("N"));
