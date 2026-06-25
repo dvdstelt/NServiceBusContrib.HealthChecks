@@ -1,0 +1,73 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NServiceBus;
+using NServiceBus.Features;
+using NServiceBusContrib.WarmUp;
+
+namespace NServiceBusContrib.HealthCheck;
+
+/// <summary>
+/// Periodically sends an <see cref="EndpointHeartbeat"/> to the endpoint's own queue. The
+/// initial heartbeat is seeded at start so the endpoint is immediately live; thereafter only
+/// the handler processing a heartbeat keeps it fresh, so a dead pump goes stale.
+/// </summary>
+sealed class EndpointHeartbeatStartupTask(
+    string endpointName,
+    HeartbeatOptions options,
+    IServiceProvider serviceProvider) : FeatureStartupTask
+{
+    readonly CancellationTokenSource stopping = new();
+    Task? loop;
+
+    protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken)
+    {
+        // Seed a baseline so the endpoint is live from the moment it starts; if the pump
+        // never processes the heartbeats it sends, this baseline goes stale on its own.
+        serviceProvider.GetService<IEndpointStatusRegistry>()
+            ?.ReportHeartbeat(endpointName, options.StaleAfter);
+
+        loop = RunAsync(session, stopping.Token);
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnStop(IMessageSession session, CancellationToken cancellationToken)
+    {
+        await stopping.CancelAsync();
+        if (loop is not null)
+        {
+            try
+            {
+                await loop;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        stopping.Dispose();
+    }
+
+    async Task RunAsync(IMessageSession session, CancellationToken cancellationToken)
+    {
+        var logger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<EndpointHeartbeatStartupTask>();
+        var message = new EndpointHeartbeat { EndpointName = endpointName, StaleAfterTicks = options.StaleAfter.Ticks };
+
+        using var timer = new PeriodicTimer(options.Interval);
+        while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+        {
+            try
+            {
+                await session.SendLocal(message, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                // A failed heartbeat send is not fatal; the endpoint will go stale if it keeps failing.
+                logger?.LogWarning(ex, "Failed to send heartbeat for endpoint '{EndpointName}'.", endpointName);
+            }
+        }
+    }
+}

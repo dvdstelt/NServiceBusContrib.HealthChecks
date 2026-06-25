@@ -6,7 +6,7 @@ namespace NServiceBusContrib.WarmUp;
 /// <summary>
 /// Enables warm-up: registers a <see cref="FeatureStartupTask"/> that runs the
 /// configured warm-up actions before the message pump opens, and reports the
-/// endpoint's readiness to <see cref="IEndpointReadinessRegistry"/> when present.
+/// endpoint's readiness to <see cref="IEndpointStatusRegistry"/> when present.
 /// </summary>
 /// <remarks>
 /// Not enabled by default; <see cref="WarmUpConfigurationExtensions.WarmUp(EndpointConfiguration)"/>

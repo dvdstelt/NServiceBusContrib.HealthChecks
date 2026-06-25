@@ -15,7 +15,7 @@ sealed class WarmUpStartupTask(
 {
     protected override async Task OnStart(IMessageSession session, CancellationToken cancellationToken)
     {
-        var registry = serviceProvider.GetService<IEndpointReadinessRegistry>();
+        var registry = serviceProvider.GetService<IEndpointStatusRegistry>();
         registry?.Report(endpointName, EndpointReadinessState.Starting);
 
         // Inline actions first (configured via EndpointConfiguration.WarmUp),
@@ -37,7 +37,7 @@ sealed class WarmUpStartupTask(
 
     protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken)
     {
-        serviceProvider.GetService<IEndpointReadinessRegistry>()
+        serviceProvider.GetService<IEndpointStatusRegistry>()
             ?.Report(endpointName, EndpointReadinessState.Stopped);
         return Task.CompletedTask;
     }

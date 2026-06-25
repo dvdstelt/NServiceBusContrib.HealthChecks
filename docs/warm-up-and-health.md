@@ -104,14 +104,15 @@ readiness.
 
 Dependencies: `NServiceBusContrib.WarmUp` + `Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions`.
 
-### Readiness registry (lives in WarmUp)
+### Status registry (lives in WarmUp)
 
-A host-level singleton `IEndpointReadinessRegistry` tracks each endpoint's
-state. Because every endpoint in a multi-endpoint host shares the host's
-singletons (each endpoint gets its own *scoped* container built on top of the
-host services), one registry sees them all.
+A host-level singleton `IEndpointStatusRegistry` tracks each endpoint's
+readiness state and, when liveness is enabled, its last heartbeat. Because every
+endpoint in a multi-endpoint host shares the host's singletons (each endpoint
+gets its own *scoped* container built on top of the host services), one registry
+sees them all.
 
-The warm-up startup task drives the state:
+The warm-up startup task drives the readiness state:
 
 | Hook                       | State        |
 | -------------------------- | ------------ |
@@ -125,38 +126,69 @@ registry flips that endpoint out of `Ready`. So a single faulted endpoint among
 many makes `/health` report unhealthy — without the package overriding the
 user's critical-error action.
 
+### Heartbeat liveness (phase 2)
+
+`OnStop` only fires on an orderly teardown. A process that hangs, or a pump that
+dies without a clean stop, never reaches it — readiness alone would keep
+reporting `Ready`. Heartbeat liveness closes that gap:
+
+```csharp
+endpointConfiguration.EnableEndpointHeartbeat(heartbeat =>
+{
+    heartbeat.Interval = TimeSpan.FromSeconds(15);    // how often a heartbeat is sent
+    heartbeat.StaleAfter = TimeSpan.FromSeconds(45);  // defaults to 3 * Interval
+});
+```
+
+- A `FeatureStartupTask` periodically sends an `EndpointHeartbeat` to the
+  endpoint's **own** queue and seeds an initial heartbeat at start.
+- The `EndpointHeartbeatHandler` refreshes the endpoint's heartbeat in the
+  registry — so the timestamp only stays fresh while the pump is actually
+  processing messages.
+- If the pump stalls, no heartbeat is processed, the timestamp ages past
+  `StaleAfter`, and the health check reports the endpoint unhealthy.
+- Staleness is evaluated against an injectable `TimeProvider` (so it is unit
+  testable). When scanning is disabled the handler is registered explicitly via
+  `AddHandler<T>()`; when enabled it is discovered, so it is not registered
+  twice.
+
 ### Health check
 
 ```csharp
 builder.Services
     .AddHealthChecks()
-    .AddNServiceBusEndpoints();   // reads IEndpointReadinessRegistry
+    .AddNServiceBusEndpoints();   // reads IEndpointStatusRegistry
 
 // consumer maps it the standard ASP.NET way
 app.MapHealthChecks("/health");
 ```
 
-- **Healthy** — every registered endpoint is `Ready`.
-- **Unhealthy** — at least one endpoint is `Starting` or `Stopped` (Docker keeps
-  the container out of rotation until all endpoints are warm).
-- The result `data` carries a per-endpoint breakdown so the cause is visible.
+- **Healthy** — every registered endpoint is `Ready` and (where heartbeat
+  liveness is enabled) has a fresh heartbeat.
+- **Unhealthy** — at least one endpoint is `Starting`/`Stopped`, or its heartbeat
+  is stale. Docker keeps the container out of rotation until all endpoints are
+  warm and live.
+- The result `data` carries a per-endpoint breakdown (`Ready`, `Starting`,
+  `Stopped`, or `Stale`) so the cause is visible.
 
 ## Phasing
 
-### Phase 1 (this work)
+### Phase 1
 
 - Warm-up feature + `IWarmUpTask` + both API surfaces.
 - Readiness registry driven by the warm-up startup task lifecycle.
 - Aggregate `/health` over all endpoints (Ready vs not-Ready).
-- "Healthy once started" — readiness is the signal; no liveness probing yet.
 
-### Phase 2 (designed-for, not built)
+### Phase 2
 
 - **Heartbeat liveness**: each endpoint periodically sends a tracking message to
-  its own queue. Successful processing refreshes a timestamp. If the timestamp
-  goes stale (process hung / pump died without a clean stop), the registry marks
-  the endpoint unhealthy even though it never reached `OnStop`. This catches
-  failure modes a lifecycle hook can't see.
-- Configurable thresholds (heartbeat interval, staleness window).
+  its own queue; processing refreshes a timestamp. A stale timestamp (process
+  hung / pump died without a clean stop) makes the endpoint unhealthy even though
+  it never reached `OnStop`.
+- Configurable thresholds (`Interval`, `StaleAfter`).
+
+### Later (not built)
+
 - Optional split of `/health` (liveness) vs `/health/ready` (readiness) using
-  health-check tags.
+  health-check tags (the `tags` parameter on `AddNServiceBusEndpoints` is already
+  there to support this).

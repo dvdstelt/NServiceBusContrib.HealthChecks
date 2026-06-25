@@ -14,13 +14,14 @@ namespace NServiceBusContrib.WarmUp;
 public static class WarmUpServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the readiness registry and warm-up task registry as host singletons.
-    /// Safe to call multiple times.
+    /// Registers the endpoint status registry and warm-up task registry as host
+    /// singletons. Safe to call multiple times.
     /// </summary>
     public static IServiceCollection AddNServiceBusWarmUp(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
-        services.TryAddSingleton<IEndpointReadinessRegistry, EndpointReadinessRegistry>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IEndpointStatusRegistry, EndpointStatusRegistry>();
         GetOrAddTaskRegistry(services);
         return services;
     }

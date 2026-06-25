@@ -36,7 +36,7 @@ public class WarmUpIntegrationTests
             // StartAsync only returns after warm-up has run.
             Assert.True(state.WarmUpDone);
 
-            var registry = host.Services.GetRequiredService<IEndpointReadinessRegistry>();
+            var registry = host.Services.GetRequiredService<IEndpointStatusRegistry>();
             Assert.Contains(registry.GetAll(), e =>
                 e.EndpointName == "WarmUpContrib.ProcessingTest" && e.State == EndpointReadinessState.Ready);
 
@@ -80,7 +80,7 @@ public class WarmUpIntegrationTests
             // Proves the feature activates without assembly scanning discovering it.
             Assert.True(state.WarmUpDone);
 
-            var registry = host.Services.GetRequiredService<IEndpointReadinessRegistry>();
+            var registry = host.Services.GetRequiredService<IEndpointStatusRegistry>();
             Assert.Contains(registry.GetAll(), e =>
                 e.EndpointName == "WarmUpContrib.NoScanningTest" && e.State == EndpointReadinessState.Ready);
         }

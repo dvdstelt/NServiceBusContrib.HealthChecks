@@ -28,7 +28,9 @@ public static class HealthChecksBuilderExtensions
 
         return builder.Add(new HealthCheckRegistration(
             name ?? DefaultName,
-            provider => new EndpointsHealthCheck(provider.GetRequiredService<IEndpointReadinessRegistry>()),
+            provider => new EndpointsHealthCheck(
+                provider.GetRequiredService<IEndpointStatusRegistry>(),
+                provider.GetRequiredService<TimeProvider>()),
             failureStatus,
             tags));
     }

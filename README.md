@@ -31,5 +31,6 @@ See [`docs/warm-up-and-health.md`](docs/warm-up-and-health.md) for the design, a
 
 ## Status
 
-Early days. The warm-up and health-check add-ons are at phase 1 (readiness);
-heartbeat-based liveness is planned for phase 2.
+The warm-up and health-check add-ons cover readiness (warm-up gating) and
+heartbeat-based liveness. See [`docs/warm-up-and-health.md`](docs/warm-up-and-health.md)
+for what's built and what's next.
