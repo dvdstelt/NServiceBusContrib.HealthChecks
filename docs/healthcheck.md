@@ -10,7 +10,7 @@ For a single `/health` URL (e.g. plain Docker with one `HEALTHCHECK`):
 ```csharp
 builder.Services
     .AddHealthChecks()
-    .AddNServiceBusEndpoints();   // reads IEndpointStatusRegistry
+    .AddNServiceBus();   // reads IEndpointStatusRegistry
 
 app.MapHealthChecks("/health");
 ```
@@ -21,8 +21,8 @@ and map them to separate URLs by tag:
 ```csharp
 builder.Services
     .AddHealthChecks()
-    .AddNServiceBusEndpointsReadiness()   // tag: "ready"
-    .AddNServiceBusEndpointsLiveness();   // tag: "live"
+    .AddNServiceBusReadiness()   // tag: "ready"
+    .AddNServiceBusLiveness();   // tag: "live"
 
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
@@ -94,7 +94,7 @@ starting; the `livenessProbe` stays lenient so warm-up never triggers a restart.
 
 ## What the readiness check evaluates
 
-The readiness check (and the combined `AddNServiceBusEndpoints`) reads a snapshot
+The readiness check (and the combined `AddNServiceBus`) reads a snapshot
 of all endpoints and evaluates each:
 
 ```mermaid

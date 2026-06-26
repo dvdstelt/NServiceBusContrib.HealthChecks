@@ -10,13 +10,13 @@ public class EndpointsHealthCheckTests
     static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
     static Task<HealthReport> RunAsync(Action<IEndpointStatusRegistry> arrange, TimeProvider? timeProvider = null) =>
-        RunCoreAsync(arrange, b => b.AddNServiceBusEndpoints(), timeProvider);
+        RunCoreAsync(arrange, b => b.AddNServiceBus(), timeProvider);
 
     static Task<HealthReport> RunReadinessAsync(Action<IEndpointStatusRegistry> arrange, TimeProvider? timeProvider = null) =>
-        RunCoreAsync(arrange, b => b.AddNServiceBusEndpointsReadiness(), timeProvider);
+        RunCoreAsync(arrange, b => b.AddNServiceBusReadiness(), timeProvider);
 
     static Task<HealthReport> RunLivenessAsync(Action<IEndpointStatusRegistry> arrange, TimeProvider? timeProvider = null) =>
-        RunCoreAsync(arrange, b => b.AddNServiceBusEndpointsLiveness(), timeProvider);
+        RunCoreAsync(arrange, b => b.AddNServiceBusLiveness(), timeProvider);
 
     static async Task<HealthReport> RunCoreAsync(
         Action<IEndpointStatusRegistry> arrange,
@@ -42,7 +42,7 @@ public class EndpointsHealthCheckTests
             : await healthChecks.CheckHealthAsync(predicate);
     }
 
-    // ---- Combined check (AddNServiceBusEndpoints == readiness semantics) ----
+    // ---- Combined check (AddNServiceBus == readiness semantics) ----
 
     [Fact]
     public async Task Unhealthy_when_no_endpoints_have_started()
@@ -132,7 +132,7 @@ public class EndpointsHealthCheckTests
     {
         var report = await RunCoreAsync(
             registry => registry.Report("Sales", EndpointReadinessState.Ready),
-            builder => builder.AddNServiceBusEndpointsReadiness(tags: ["custom"]),
+            builder => builder.AddNServiceBusReadiness(tags: ["custom"]),
             predicate: r => r.Tags.Contains(HealthChecksBuilderExtensions.ReadinessTag));
 
         // Filtering on the canonical "ready" tag still finds the check despite the custom tag.
@@ -221,8 +221,8 @@ public class EndpointsHealthCheckTests
         Action<IEndpointStatusRegistry> arrange = registry => registry.Report("Sales", EndpointReadinessState.Starting);
         Action<IHealthChecksBuilder> registerBoth = builder =>
         {
-            builder.AddNServiceBusEndpointsReadiness();
-            builder.AddNServiceBusEndpointsLiveness();
+            builder.AddNServiceBusReadiness();
+            builder.AddNServiceBusLiveness();
         };
 
         var ready = await RunCoreAsync(arrange, registerBoth,

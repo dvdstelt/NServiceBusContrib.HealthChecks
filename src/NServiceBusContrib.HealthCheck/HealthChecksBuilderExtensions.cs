@@ -7,21 +7,21 @@ namespace NServiceBusContrib.HealthCheck;
 /// <summary>Registers the NServiceBus endpoints health checks.</summary>
 /// <remarks>
 /// For a single <c>/health</c> URL (e.g. plain Docker <c>HEALTHCHECK</c>) use
-/// <see cref="AddNServiceBusEndpoints"/>. For the Docker/Kubernetes probe model use
-/// <see cref="AddNServiceBusEndpointsReadiness"/> + <see cref="AddNServiceBusEndpointsLiveness"/>
+/// <see cref="AddNServiceBus"/>. For the Docker/Kubernetes probe model use
+/// <see cref="AddNServiceBusReadiness"/> + <see cref="AddNServiceBusLiveness"/>
 /// and map them to separate URLs by tag. The only state that differs between readiness and
 /// liveness is <c>Starting</c>: a warming-up endpoint is not ready but is alive.
 /// </remarks>
 public static class HealthChecksBuilderExtensions
 {
     /// <summary>The default name of the combined (readiness) health check.</summary>
-    public const string DefaultName = "nservicebus-endpoints";
+    public const string DefaultName = "nservicebus";
 
     /// <summary>The default name of the readiness health check.</summary>
-    public const string ReadinessName = "nservicebus-endpoints-ready";
+    public const string ReadinessName = "nservicebus-ready";
 
     /// <summary>The default name of the liveness health check.</summary>
-    public const string LivenessName = "nservicebus-endpoints-live";
+    public const string LivenessName = "nservicebus-live";
 
     /// <summary>The tag applied to the readiness health check, for <c>MapHealthChecks</c> filtering.</summary>
     public const string ReadinessTag = "ready";
@@ -32,11 +32,11 @@ public static class HealthChecksBuilderExtensions
     /// <summary>
     /// Adds a single health check that is healthy only when every NServiceBus endpoint has
     /// completed warm-up and is processing. Equivalent to the readiness check
-    /// (<see cref="AddNServiceBusEndpointsReadiness"/>) but without a tag. Map it the standard
+    /// (<see cref="AddNServiceBusReadiness"/>) but without a tag. Map it the standard
     /// way, e.g. <c>app.MapHealthChecks("/health")</c>. For Kubernetes, prefer the readiness +
     /// liveness pair.
     /// </summary>
-    public static IHealthChecksBuilder AddNServiceBusEndpoints(
+    public static IHealthChecksBuilder AddNServiceBus(
         this IHealthChecksBuilder builder,
         string? name = null,
         HealthStatus? failureStatus = null,
@@ -49,7 +49,7 @@ public static class HealthChecksBuilderExtensions
     /// endpoint is reported not ready, so traffic is gated and — with a Docker
     /// <c>--start-period</c> — the container shows as <c>starting</c>.
     /// </summary>
-    public static IHealthChecksBuilder AddNServiceBusEndpointsReadiness(
+    public static IHealthChecksBuilder AddNServiceBusReadiness(
         this IHealthChecksBuilder builder,
         string? name = null,
         HealthStatus? failureStatus = null,
@@ -61,7 +61,7 @@ public static class HealthChecksBuilderExtensions
     /// has stopped or its heartbeat has gone stale. A warming-up endpoint is reported alive, so a
     /// liveness probe does not restart the process during warm-up.
     /// </summary>
-    public static IHealthChecksBuilder AddNServiceBusEndpointsLiveness(
+    public static IHealthChecksBuilder AddNServiceBusLiveness(
         this IHealthChecksBuilder builder,
         string? name = null,
         HealthStatus? failureStatus = null,

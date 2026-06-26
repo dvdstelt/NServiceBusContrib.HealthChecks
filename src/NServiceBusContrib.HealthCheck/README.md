@@ -8,7 +8,7 @@ the others keep running, the health check reports unhealthy.
 ```csharp
 builder.Services
     .AddHealthChecks()
-    .AddNServiceBusEndpoints();
+    .AddNServiceBus();
 
 // map it the standard way
 app.MapHealthChecks("/health");
@@ -30,8 +30,8 @@ them to separate URLs so a liveness probe doesn't restart the app during warm-up
 ```csharp
 builder.Services
     .AddHealthChecks()
-    .AddNServiceBusEndpointsReadiness()   // tag: "ready"
-    .AddNServiceBusEndpointsLiveness();   // tag: "live"
+    .AddNServiceBusReadiness()   // tag: "ready"
+    .AddNServiceBusLiveness();   // tag: "live"
 
 app.MapHealthChecks("/health/ready", new() { Predicate = r => r.Tags.Contains("ready") });
 app.MapHealthChecks("/health/live",  new() { Predicate = r => r.Tags.Contains("live")  });
