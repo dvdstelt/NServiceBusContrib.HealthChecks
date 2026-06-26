@@ -10,7 +10,7 @@ For a single `/health` URL (e.g. plain Docker with one `HEALTHCHECK`):
 ```csharp
 builder.Services
     .AddHealthChecks()
-    .AddNServiceBus();   // reads IEndpointStatusRegistry
+    .AddNServiceBus();
 
 app.MapHealthChecks("/health");
 ```
