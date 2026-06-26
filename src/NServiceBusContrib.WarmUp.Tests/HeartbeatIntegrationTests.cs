@@ -33,10 +33,10 @@ public class HeartbeatIntegrationTests
         }
 
         endpoint.WarmUp();
-        endpoint.EnableEndpointHeartbeat(heartbeat =>
+        endpoint.EnableLivenessHeartbeat(heartbeat =>
         {
-            heartbeat.Interval = TimeSpan.FromMilliseconds(150);
-            heartbeat.StaleAfter = TimeSpan.FromSeconds(30);
+            heartbeat.Interval(TimeSpan.FromMilliseconds(150));
+            heartbeat.StaleAfter(TimeSpan.FromSeconds(30));
         });
 
         builder.Services.AddNServiceBusEndpoint(endpoint);

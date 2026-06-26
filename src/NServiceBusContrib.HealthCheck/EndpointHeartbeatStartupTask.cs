@@ -13,7 +13,7 @@ namespace NServiceBusContrib.HealthCheck;
 /// </summary>
 sealed class EndpointHeartbeatStartupTask(
     string endpointName,
-    HeartbeatOptions options,
+    HeartbeatSettings settings,
     IServiceProvider serviceProvider) : FeatureStartupTask
 {
     readonly CancellationTokenSource stopping = new();
@@ -24,7 +24,7 @@ sealed class EndpointHeartbeatStartupTask(
         // Seed a baseline so the endpoint is live from the moment it starts; if the pump
         // never processes the heartbeats it sends, this baseline goes stale on its own.
         serviceProvider.GetService<IEndpointStatusRegistry>()
-            ?.ReportHeartbeat(endpointName, options.StaleAfter);
+            ?.ReportHeartbeat(endpointName, settings.ResolvedStaleAfter);
 
         loop = RunAsync(session, stopping.Token);
         return Task.CompletedTask;
@@ -50,9 +50,9 @@ sealed class EndpointHeartbeatStartupTask(
     async Task RunAsync(IMessageSession session, CancellationToken cancellationToken)
     {
         var logger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<EndpointHeartbeatStartupTask>();
-        var message = new EndpointHeartbeat { EndpointName = endpointName, StaleAfterTicks = options.StaleAfter.Ticks };
+        var message = new EndpointHeartbeat { EndpointName = endpointName, StaleAfterTicks = settings.ResolvedStaleAfter.Ticks };
 
-        using var timer = new PeriodicTimer(options.Interval);
+        using var timer = new PeriodicTimer(settings.ResolvedInterval);
         while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
         {
             try

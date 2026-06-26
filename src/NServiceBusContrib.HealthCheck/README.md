@@ -51,16 +51,18 @@ probe examples.
 
 ## Heartbeat liveness (optional)
 
-Detect a stalled or dead message pump, not just an orderly shutdown:
+Detect a stalled or dead message pump, not just an orderly shutdown. Configured
+**per endpoint** (the mirror of `WarmUp(...)`): instrument the endpoint here, then
+expose it with `AddNServiceBusLiveness()`.
 
 ```csharp
-endpointConfiguration.EnableEndpointHeartbeat(heartbeat =>
+endpointConfiguration.EnableLivenessHeartbeat(heartbeat =>
 {
-    heartbeat.Interval = TimeSpan.FromSeconds(15);
-    heartbeat.StaleAfter = TimeSpan.FromSeconds(45);   // defaults to 3 * Interval
+    heartbeat.Interval(TimeSpan.FromSeconds(15));
+    heartbeat.StaleAfter(TimeSpan.FromMinutes(1));   // defaults to 3 * interval
 });
 ```
 
 The endpoint periodically sends a heartbeat to its own queue; processing it keeps
 the endpoint live. If the pump stops processing, the heartbeat goes stale and the
-health check reports the endpoint unhealthy.
+liveness check reports the endpoint unhealthy.

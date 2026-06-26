@@ -131,11 +131,18 @@ Readiness alone can't catch a process that hangs or a pump that dies without a
 clean stop — `OnStop` never fires, so the endpoint would keep reporting `Ready`.
 Heartbeat liveness closes that gap.
 
+It's configured **per endpoint** (like `WarmUp(...)`), because the heartbeat is
+sent through that endpoint's own queue — host DI has no session to send through.
+Think of it as two sides: *instrument each endpoint* (`WarmUp(...)` for readiness,
+`EnableLivenessHeartbeat(...)` for liveness) → *expose the aggregate* with
+`AddNServiceBus*` on `AddHealthChecks()`. The settings use the NServiceBus fluent
+style, like `Recoverability().Delayed(...)`:
+
 ```csharp
-endpointConfiguration.EnableEndpointHeartbeat(heartbeat =>
+endpointConfiguration.EnableLivenessHeartbeat(heartbeat =>
 {
-    heartbeat.Interval = TimeSpan.FromSeconds(15);    // how often a heartbeat is sent
-    heartbeat.StaleAfter = TimeSpan.FromSeconds(45);  // defaults to 3 * Interval
+    heartbeat.Interval(TimeSpan.FromSeconds(15));    // how often a heartbeat is sent
+    heartbeat.StaleAfter(TimeSpan.FromMinutes(1));   // defaults to 3 * interval
 });
 ```
 

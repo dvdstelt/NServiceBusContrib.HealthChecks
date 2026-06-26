@@ -3,24 +3,25 @@ using NServiceBus.Configuration.AdvancedExtensibility;
 
 namespace NServiceBusContrib.HealthCheck;
 
-/// <summary>Configures heartbeat liveness on an <see cref="EndpointConfiguration"/>.</summary>
+/// <summary>Configures liveness heartbeats on an <see cref="EndpointConfiguration"/>.</summary>
 public static class HeartbeatConfigurationExtensions
 {
     /// <summary>
-    /// Enables heartbeat liveness for the endpoint. The endpoint periodically sends a heartbeat
-    /// message to its own queue; processing it keeps the endpoint's liveness fresh in the status
-    /// registry. If the pump stops processing, the heartbeat goes stale and the health check
-    /// reports the endpoint unhealthy.
+    /// Enables the liveness heartbeat for the endpoint: it periodically sends a heartbeat message
+    /// to its own queue, and processing that message keeps the endpoint's liveness fresh in the
+    /// status registry. If the pump stops processing, the heartbeat goes stale and
+    /// <c>AddNServiceBusLiveness()</c> reports the endpoint unhealthy. This is the per-endpoint
+    /// liveness source; <c>WarmUp(...)</c> is the matching readiness source.
     /// </summary>
-    public static EndpointConfiguration EnableEndpointHeartbeat(
+    public static EndpointConfiguration EnableLivenessHeartbeat(
         this EndpointConfiguration endpointConfiguration,
-        Action<HeartbeatOptions>? configure = null)
+        Action<HeartbeatSettings>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(endpointConfiguration);
 
-        var options = new HeartbeatOptions();
-        configure?.Invoke(options);
-        endpointConfiguration.GetSettings().Set(options);
+        var settings = new HeartbeatSettings();
+        configure?.Invoke(settings);
+        endpointConfiguration.GetSettings().Set(settings);
 
         endpointConfiguration.EnableFeature<EndpointHeartbeatFeature>();
 
