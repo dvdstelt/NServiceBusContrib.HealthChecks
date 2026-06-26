@@ -75,18 +75,16 @@ public interface IWarmUpTask
 }
 ```
 
-### API — IServiceCollection (DI-centric)
+Warm-up tasks are configured per endpoint via `EndpointConfiguration.WarmUp(...)`.
+`w.Run<T>()` resolves the task from the endpoint's service provider, so there is
+no need for a host-level, endpoint-name-keyed registration API (an earlier
+`services.AddNServiceBusWarmUpTask<T>("Sales")` overload was dropped — the magic
+string identified the endpoint, which the `EndpointConfiguration` already does).
 
-For hosts that prefer to register everything against the service collection:
-
-```csharp
-builder.Services.AddNServiceBusWarmUpTask<PrimeConnectionPoolTask>("Sales");
-```
-
-The feature still has to be enabled on the endpoint; these DI-registered tasks
-are then picked up and run alongside any configured inline. `config.WarmUp()`
-(no argument) enables the feature for the endpoint without configuring inline
-actions.
+The only host-level call is `builder.Services.AddNServiceBusWarmUp()`, which
+registers the status registry the health check reads. It takes no endpoint name.
+`config.WarmUp()` (no argument) enables the feature for an endpoint without
+configuring inline actions (e.g. to opt into readiness tracking only).
 
 ### Enabling and assembly scanning
 

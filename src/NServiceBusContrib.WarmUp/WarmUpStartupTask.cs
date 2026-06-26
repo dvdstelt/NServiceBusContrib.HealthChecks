@@ -10,7 +10,7 @@ namespace NServiceBusContrib.WarmUp;
 /// </summary>
 sealed class WarmUpStartupTask(
     string endpointName,
-    IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>> inlineActions,
+    IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>> actions,
     IServiceProvider serviceProvider) : FeatureStartupTask
 {
     protected override async Task OnStart(IMessageSession session, CancellationToken cancellationToken)
@@ -18,16 +18,7 @@ sealed class WarmUpStartupTask(
         var registry = serviceProvider.GetService<IEndpointStatusRegistry>();
         registry?.Report(endpointName, EndpointReadinessState.Starting);
 
-        // Inline actions first (configured via EndpointConfiguration.WarmUp),
-        // then any registered against the service collection for this endpoint.
-        var diActions = serviceProvider.GetService<WarmUpTaskRegistry>()?.GetFor(endpointName) ?? [];
-
-        foreach (var action in inlineActions)
-        {
-            await action(serviceProvider, cancellationToken);
-        }
-
-        foreach (var action in diActions)
+        foreach (var action in actions)
         {
             await action(serviceProvider, cancellationToken);
         }

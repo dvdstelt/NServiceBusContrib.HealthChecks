@@ -11,15 +11,13 @@ var endpointConfiguration = new EndpointConfiguration("Sales");
 endpointConfiguration.WarmUp(warmup =>
 {
     warmup.Run(async cancellationToken => await Cache.PrimeAsync(cancellationToken));
-    warmup.Run<PrimeConnectionPoolTask>();   // resolved from DI
+    warmup.Run<PrimeConnectionPoolTask>();   // resolved from DI, runs in order
 });
 ```
 
-Or register tasks against the service collection:
-
-```csharp
-builder.Services.AddNServiceBusWarmUpTask<PrimeConnectionPoolTask>("Sales");
-```
+Tasks are configured on the endpoint, so there is no endpoint-name string to pass.
+`warmup.Run<T>()` resolves the task (and its dependencies) from the endpoint's
+service provider.
 
 Works in single- and multi-endpoint hosts (including hosts that disable assembly
 scanning). Pairs with **NServiceBusContrib.HealthCheck** to expose endpoint
