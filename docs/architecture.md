@@ -86,6 +86,7 @@ The shared state both packages touch is `IEndpointStatusRegistry` (in `WarmUp`):
 - **Phase 1** — warm-up feature, readiness registry, aggregate `/health`.
 - **Phase 2** — heartbeat liveness (stale heartbeat ⇒ unhealthy even without a
   clean stop).
-- **Later (not built)** — optional split of `/health` (liveness) vs
-  `/health/ready` (readiness) via health-check tags; the `tags` parameter on
-  `AddNServiceBusEndpoints` already exists to support it.
+- **Phase 3** — readiness vs liveness split via health-check tags, so a
+  warming-up endpoint is reported alive-but-not-ready (`/health/ready` +
+  `/health/live`, mapping onto Docker `--start-period` and the Kubernetes
+  startup/readiness/liveness probes). See [healthcheck.md](healthcheck.md).

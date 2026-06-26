@@ -1,22 +1,101 @@
 # NServiceBusContrib.HealthCheck
 
-Aggregates the status of every NServiceBus endpoint in the process into a single
-ASP.NET Core health check, suitable for a container `/health` endpoint.
+Aggregates the status of every NServiceBus endpoint in the process into ASP.NET
+Core health checks, suitable for container `/health` probes.
 
 ## Registration
+
+For a single `/health` URL (e.g. plain Docker with one `HEALTHCHECK`):
 
 ```csharp
 builder.Services
     .AddHealthChecks()
     .AddNServiceBusEndpoints();   // reads IEndpointStatusRegistry
 
-// map it the standard ASP.NET way
 app.MapHealthChecks("/health");
 ```
 
-## What "healthy" means
+For the Docker/Kubernetes probe model, register the readiness and liveness checks
+and map them to separate URLs by tag:
 
-The check reads a snapshot of all endpoints from the registry and evaluates each:
+```csharp
+builder.Services
+    .AddHealthChecks()
+    .AddNServiceBusEndpointsReadiness()   // tag: "ready"
+    .AddNServiceBusEndpointsLiveness();   // tag: "live"
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("ready")
+});
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("live")
+});
+```
+
+## Readiness vs liveness
+
+The two checks answer different questions, and `Starting` (warming up) is the
+only endpoint state where they differ — that difference is the whole point:
+
+| Endpoint state           | `/health/ready` | `/health/live` |
+| ------------------------ | --------------- | -------------- |
+| not started yet          | Unhealthy       | Healthy        |
+| **Starting** (warm-up)   | Unhealthy       | **Healthy**    |
+| Ready, fresh heartbeat   | Healthy         | Healthy        |
+| Ready, stale heartbeat   | Unhealthy       | Unhealthy      |
+| Stopped / crashed        | Unhealthy       | Unhealthy      |
+
+- **Readiness** — "has it finished starting and can it serve?" Gates traffic.
+- **Liveness** — "is it alive, or should it be restarted?" A warming-up endpoint
+  is alive, so liveness stays healthy during warm-up and only fails on a real
+  crash (`Stopped`) or a stalled pump (stale heartbeat). An empty registry
+  (nothing started yet) is alive too — so a liveness probe never restarts a
+  still-booting process.
+
+### Docker
+
+Plain Docker has a single health probe. Point it at readiness (or the combined
+`/health`); the **`starting`** state comes from `--start-period`, not the app:
+
+```dockerfile
+HEALTHCHECK --start-period=60s --interval=10s --timeout=3s --retries=3 \
+  CMD curl -f http://localhost:8080/health/ready || exit 1
+```
+
+While `/health/ready` fails inside the start period, Docker shows the container as
+`starting`; the first success flips it to `healthy`; failures only mark it
+`unhealthy` after the start period elapses (and each restart resets the window).
+
+### Kubernetes
+
+```yaml
+startupProbe:        # bounds total boot time; the others don't run until it passes
+  httpGet: { path: /health/ready, port: 8080 }
+  periodSeconds: 10
+  failureThreshold: 30        # ~5 minutes of warm-up budget
+readinessProbe:      # gates Service traffic (in/out of rotation)
+  httpGet: { path: /health/ready, port: 8080 }
+  periodSeconds: 10
+livenessProbe:       # restarts only a wedged/dead pod
+  httpGet: { path: /health/live, port: 8080 }
+  periodSeconds: 10
+  failureThreshold: 3
+```
+
+Startup and readiness share `/health/ready`. The `startupProbe` gives a generous
+boot budget and is the only probe that should kill a pod that never finishes
+starting; the `livenessProbe` stays lenient so warm-up never triggers a restart.
+
+> Don't mix the two styles on one URL. A tag-filtered endpoint excludes any check
+> that lacks the tag, so either map an untagged `/health` from the combined check,
+> or the tag-filtered `/health/ready` + `/health/live`.
+
+## What the readiness check evaluates
+
+The readiness check (and the combined `AddNServiceBusEndpoints`) reads a snapshot
+of all endpoints and evaluates each:
 
 ```mermaid
 flowchart TD

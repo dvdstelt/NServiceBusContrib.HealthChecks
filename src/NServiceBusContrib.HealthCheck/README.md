@@ -22,6 +22,33 @@ app.MapHealthChecks("/health");
 Readiness is driven by **NServiceBusContrib.WarmUp**, so enable warm-up on each
 endpoint you want reflected (`endpointConfiguration.WarmUp(...)`).
 
+## Readiness + liveness (Docker / Kubernetes)
+
+A warming-up endpoint is *alive but not ready*. Register the two probes and map
+them to separate URLs so a liveness probe doesn't restart the app during warm-up:
+
+```csharp
+builder.Services
+    .AddHealthChecks()
+    .AddNServiceBusEndpointsReadiness()   // tag: "ready"
+    .AddNServiceBusEndpointsLiveness();   // tag: "live"
+
+app.MapHealthChecks("/health/ready", new() { Predicate = r => r.Tags.Contains("ready") });
+app.MapHealthChecks("/health/live",  new() { Predicate = r => r.Tags.Contains("live")  });
+```
+
+| Endpoint state | `/health/ready` | `/health/live` |
+| -------------- | --------------- | -------------- |
+| Starting       | Unhealthy       | Healthy        |
+| Ready (fresh)  | Healthy         | Healthy        |
+| Stopped / stale heartbeat | Unhealthy | Unhealthy   |
+
+Kubernetes: point `startupProbe` + `readinessProbe` at `/health/ready` and
+`livenessProbe` at `/health/live`. Docker: one `HEALTHCHECK --start-period=...`
+at `/health/ready` (or `/health`) — Docker's `starting` state comes from the
+start period. See [docs/healthcheck.md](../../docs/healthcheck.md) for full
+probe examples.
+
 ## Heartbeat liveness (optional)
 
 Detect a stalled or dead message pump, not just an orderly shutdown:
