@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/NServiceBusContrib.HealthCheck/NServiceBusContrib.HealthCheck.csproj" />
-    <Project Path="src/NServiceBusContrib.WarmUp/NServiceBusContrib.WarmUp.csproj" />
+    <Project Path="NServiceBusContrib.HealthCheck/NServiceBusContrib.HealthCheck.csproj" />
+    <Project Path="NServiceBusContrib.WarmUp/NServiceBusContrib.WarmUp.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NServiceBusContrib.WarmUp.Tests/NServiceBusContrib.WarmUp.Tests.csproj" />

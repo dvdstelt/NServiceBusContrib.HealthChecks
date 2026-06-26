@@ -4,10 +4,10 @@ A collection of community add-ons and extensions for [NServiceBus](https://docs.
 
 ## Layout
 
-| Path     | Purpose                                                            |
-| -------- | ------------------------------------------------------------------ |
-| `src/`   | Source code for the add-on packages and their tests.               |
-| `docs/`  | Ideas, design notes, and plans for current and future add-ons.     |
+| Path     | Purpose                                                                 |
+| -------- | ----------------------------------------------------------------------- |
+| `src/`   | All code: the solution, the add-on packages, and the tests (`src/tests/`). |
+| `docs/`  | Design notes, diagrams, and the idea backlog.                           |
 
 ## Getting started
 
@@ -15,8 +15,8 @@ The repo targets .NET 10 (pinned via [`global.json`](global.json) with
 `rollForward: latestFeature`).
 
 ```bash
-dotnet build
-dotnet test
+dotnet build src/NServiceBusContrib.slnx
+dotnet test src/NServiceBusContrib.slnx
 ```
 
 ## Add-ons
@@ -26,11 +26,17 @@ dotnet test
 | [`NServiceBusContrib.WarmUp`](src/NServiceBusContrib.WarmUp) | Block message processing until user-defined warm-up actions complete. |
 | [`NServiceBusContrib.HealthCheck`](src/NServiceBusContrib.HealthCheck) | Aggregate the readiness of every endpoint in the process into one `/health` check. |
 
-See [`docs/warm-up-and-health.md`](docs/warm-up-and-health.md) for the design, and
-[`docs/ideas.md`](docs/ideas.md) for the backlog.
+## Docs
+
+| Doc | Contents |
+| --- | -------- |
+| [`docs/architecture.md`](docs/architecture.md) | How the two packages fit together (component diagram, multi-endpoint host). |
+| [`docs/warmup.md`](docs/warmup.md) | WarmUp design: warm-up-before-pump, readiness states. |
+| [`docs/healthcheck.md`](docs/healthcheck.md) | HealthCheck design: aggregation and heartbeat liveness. |
+| [`docs/ideas.md`](docs/ideas.md) | Backlog of add-on ideas. |
 
 ## Status
 
 The warm-up and health-check add-ons cover readiness (warm-up gating) and
-heartbeat-based liveness. See [`docs/warm-up-and-health.md`](docs/warm-up-and-health.md)
-for what's built and what's next.
+heartbeat-based liveness. See [`docs/architecture.md`](docs/architecture.md) for
+what's built and what's next.
