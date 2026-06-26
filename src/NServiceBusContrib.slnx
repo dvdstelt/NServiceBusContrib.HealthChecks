@@ -4,6 +4,6 @@
     <Project Path="NServiceBusContrib.WarmUp/NServiceBusContrib.WarmUp.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/NServiceBusContrib.WarmUp.Tests/NServiceBusContrib.WarmUp.Tests.csproj" />
+    <Project Path="NServiceBusContrib.WarmUp.Tests/NServiceBusContrib.WarmUp.Tests.csproj" />
   </Folder>
 </Solution>

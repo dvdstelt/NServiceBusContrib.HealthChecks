@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\NServiceBusContrib.WarmUp\NServiceBusContrib.WarmUp.csproj" />
-    <ProjectReference Include="..\..\NServiceBusContrib.HealthCheck\NServiceBusContrib.HealthCheck.csproj" />
+    <ProjectReference Include="..\NServiceBusContrib.WarmUp\NServiceBusContrib.WarmUp.csproj" />
+    <ProjectReference Include="..\NServiceBusContrib.HealthCheck\NServiceBusContrib.HealthCheck.csproj" />
   </ItemGroup>
 
 </Project>

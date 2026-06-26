@@ -6,7 +6,7 @@ A collection of community add-ons and extensions for [NServiceBus](https://docs.
 
 | Path     | Purpose                                                                 |
 | -------- | ----------------------------------------------------------------------- |
-| `src/`   | All code: the solution, the add-on packages, and the tests (`src/tests/`). |
+| `src/`   | All code: the solution, the add-on packages, and the test project.      |
 | `docs/`  | Design notes, diagrams, and the idea backlog.                           |
 
 ## Getting started
