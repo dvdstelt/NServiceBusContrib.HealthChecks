@@ -5,9 +5,10 @@ name: Publish
 #
 # Policy (enforced by the "Validate tag" step):
 #   - on main:      stable tags only (e.g. 1.0.0). alpha/beta tags on main are rejected.
-#   - on a branch:  allowed only if the tagged commit has an open PR, for prereleases
-#                   (e.g. 1.1.0-alpha.1 / 1.1.0-beta.1).
+#   - on a branch:  prerelease tags only (e.g. 1.1.0-beta.1), and only if the tagged commit
+#                   has an open PR. Stable tags off main are rejected.
 #   - anything else (a tag on neither main nor a PR branch) is rejected.
+# So a stable release can only ever come from a tag on main (after merge).
 #
 # Trusted publishing (OIDC) - no long-lived API key. nuget.org policy:
 #   Owner: dvdstelt / Repository: NServiceBusContrib.HealthChecks / Workflow: publish.yml
@@ -46,14 +47,18 @@ jobs:
 
           if $on_main; then
             if $prerelease; then
-              echo "::error::Prerelease (alpha/beta) tags are not allowed on main. Tag stable versions on main; tag prereleases on a PR branch."
+              echo "::error::Prerelease (alpha/beta) tags are not allowed on main. Release the stable version by tagging on main; tag prereleases on a PR branch."
               exit 1
             fi
             echo "Stable release from main: OK."
           else
+            if ! $prerelease; then
+              echo "::error::Stable tags must be created on main. Tag prereleases (e.g. 1.1.0-beta.1) on a PR branch, and release the stable version by tagging on main after the PR is merged."
+              exit 1
+            fi
             open_prs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '[.[] | select(.state == "open")] | length')
             if [ "${open_prs:-0}" -eq 0 ]; then
-              echo "::error::This tag is not on main and has no open PR. Publish only from main (stable) or a commit with an open PR (prerelease)."
+              echo "::error::This prerelease tag is not on a commit with an open PR. Tag prereleases on a PR branch."
               exit 1
             fi
             echo "Prerelease from a PR branch ($open_prs open PR(s)): OK."
