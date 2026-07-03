@@ -113,6 +113,41 @@ public class HeartbeatIntegrationTests
         Assert.False(auditedHeartbeat, "liveness heartbeat messages must not be forwarded to the audit queue");
     }
 
+    [Fact]
+    public async Task Heartbeat_without_a_status_registry_is_a_no_op()
+    {
+        var storage = Path.Combine(Path.GetTempPath(), "nsbcontrib-heartbeat", Guid.NewGuid().ToString("N"));
+
+        var builder = Host.CreateApplicationBuilder();
+
+        var endpoint = new EndpointConfiguration("HeartbeatContrib.NoRegistry");
+        endpoint.UseTransport(new LearningTransport { StorageDirectory = storage });
+        endpoint.UseSerialization<SystemJsonSerializer>();
+        endpoint.SendFailedMessagesTo("error");
+        endpoint.EnableInstallers();
+        endpoint.AssemblyScanner().Disable = true;
+        endpoint.EnableLivenessHeartbeat(heartbeat => heartbeat.Interval(TimeSpan.FromMilliseconds(100)));
+
+        builder.Services.AddNServiceBusEndpoint(endpoint);
+        // Deliberately no health checks / AddNServiceBusWarmUp -> no IEndpointStatusRegistry.
+
+        using var host = builder.Build();
+        await host.StartAsync();
+        try
+        {
+            // Long enough that several heartbeats would have been sent if not gated.
+            await Task.Delay(400);
+        }
+        finally
+        {
+            await host.StopAsync();
+            TryDelete(storage);
+        }
+
+        // Reaching here without throwing proves EnableLivenessHeartbeat is a safe no-op when no
+        // status registry consumes it (the sender is never started; OnStop handles the null loop).
+    }
+
     static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;

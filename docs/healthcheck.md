@@ -176,6 +176,12 @@ audit-pipeline behavior (`Behavior<IAuditContext>`) short-circuits it, so even
 with `AuditProcessedMessagesTo(...)` enabled the heartbeats never reach the audit
 queue. (Harmless when auditing is off — the audit pipeline isn't invoked.)
 
+Heartbeats are only sent when a status registry is present (i.e. the health checks
+— or `AddNServiceBusWarmUp()` — are registered on the host). If you enable
+`EnableLivenessHeartbeat(...)` on an endpoint whose host doesn't consume liveness,
+it is a no-op (nothing sends), so the same shared endpoint configuration can be
+reused by hosts that don't expose `/health`.
+
 ## Handler registration ([Handler] / source generation)
 
 `EndpointHeartbeatHandler` is a NServiceBus 10.2 `[Handler]` POCO: it does **not**

@@ -16,15 +16,27 @@ sealed class EndpointHeartbeatStartupTask(
     HeartbeatSettings settings,
     IServiceProvider serviceProvider) : FeatureStartupTask
 {
+    readonly ILogger? logger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<EndpointHeartbeatStartupTask>();
     readonly CancellationTokenSource stopping = new();
     Task? loop;
 
     protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken)
     {
+        var registry = serviceProvider.GetService<IEndpointStatusRegistry>();
+        if (registry is null)
+        {
+            // Nothing consumes heartbeats without a status registry (no NServiceBusContrib health
+            // checks registered), so don't send any. Register the checks — or call
+            // AddNServiceBusWarmUp() — to activate liveness.
+            logger?.LogInformation(
+                "Liveness heartbeat is enabled for endpoint '{EndpointName}' but no status registry is registered; heartbeats will not be sent.",
+                endpointName);
+            return Task.CompletedTask;
+        }
+
         // Seed a baseline so the endpoint is live from the moment it starts; if the pump
         // never processes the heartbeats it sends, this baseline goes stale on its own.
-        serviceProvider.GetService<IEndpointStatusRegistry>()
-            ?.ReportHeartbeat(endpointName, settings.ResolvedStaleAfter);
+        registry.ReportHeartbeat(endpointName, settings.ResolvedStaleAfter);
 
         loop = RunAsync(session, stopping.Token);
         return Task.CompletedTask;
@@ -49,7 +61,6 @@ sealed class EndpointHeartbeatStartupTask(
 
     async Task RunAsync(IMessageSession session, CancellationToken cancellationToken)
     {
-        var logger = serviceProvider.GetService<ILoggerFactory>()?.CreateLogger<EndpointHeartbeatStartupTask>();
         var message = new EndpointHeartbeat { EndpointName = endpointName, StaleAfterTicks = settings.ResolvedStaleAfter.Ticks };
 
         using var timer = new PeriodicTimer(settings.ResolvedInterval);
