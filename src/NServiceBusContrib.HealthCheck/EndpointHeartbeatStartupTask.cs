@@ -28,7 +28,7 @@ sealed class EndpointHeartbeatStartupTask(
             // Nothing consumes heartbeats without a status registry (no NServiceBusContrib health
             // checks registered), so don't send any. Register the checks — or call
             // AddNServiceBusWarmUp() — to activate liveness.
-            logger?.LogInformation(
+            logger?.LogWarning(
                 "Liveness heartbeat is enabled for endpoint '{EndpointName}' but no status registry is registered; heartbeats will not be sent.",
                 endpointName);
             return Task.CompletedTask;
