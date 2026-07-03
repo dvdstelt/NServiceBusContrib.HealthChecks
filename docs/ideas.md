@@ -9,7 +9,8 @@ Status legend: 💡 idea · 📝 designing · 🚧 in progress · ✅ shipped
 
 | Add-on | Status | Notes |
 | ------ | ------ | ----- |
-| _(add your first idea here)_ | 💡 | |
+| WarmUp | ✅ | Block message processing until user-defined warm-up actions complete. See [warmup.md](warmup.md) and [healthcheck.md](healthcheck.md). |
+| HealthCheck | ✅ | Aggregate `/health` over all endpoints, with readiness + heartbeat liveness. See [warmup.md](warmup.md) and [healthcheck.md](healthcheck.md). |
 
 ## Idea template
 

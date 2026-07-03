@@ -4,9 +4,11 @@ Repo-level guidance for any AI coding agent working in this repository.
 
 ## What this is
 
-Community add-ons and extensions for NServiceBus. Each add-on lives under `src/`
-as its own project (plus a matching test project). Design notes and the idea
-backlog live under `docs/`.
+Community add-ons and extensions for NServiceBus. All code lives under `src/`:
+the solution (`src/NServiceBusContrib.slnx`), one project per add-on, and the
+test project, all as sibling folders. Design notes, diagrams, and the idea backlog
+live under `docs/`. Only `global.json`, the README, and `AGENTS.md` sit at the
+repo root.
 
 ## Conventions
 
@@ -14,15 +16,16 @@ backlog live under `docs/`.
 - Nullable reference types enabled; use current C# language features.
 - Follow [SemVer](https://semver.org/) for package versions.
 - Keep each add-on self-contained: one project per package, named
-  `NServiceBus.Contrib.<AddonName>`.
-- Add a test project (`NServiceBus.Contrib.<AddonName>.Tests`) alongside each
-  add-on.
+  `NServiceBusContrib.<AddonName>` under `src/`.
+- Add a test project (`NServiceBusContrib.<AddonName>.Tests`) under `src/`
+  for each add-on.
+- Shared MSBuild settings live in `src/Directory.Build.props`.
 
 ## Build & test
 
 ```bash
-dotnet build
-dotnet test
+dotnet build src/NServiceBusContrib.slnx
+dotnet test src/NServiceBusContrib.slnx
 ```
 
 ## Before committing
