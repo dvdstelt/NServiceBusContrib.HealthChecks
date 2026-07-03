@@ -57,7 +57,12 @@ sealed class EndpointHeartbeatStartupTask(
         {
             try
             {
-                await session.SendLocal(message, cancellationToken).ConfigureAwait(false);
+                // Send to this endpoint's own queue (like SendLocal) but stamp a header so the
+                // audit filter can keep the heartbeat out of the audit queue.
+                var options = new SendOptions();
+                options.RouteToThisEndpoint();
+                options.SetHeader(EndpointHeartbeat.HeaderKey, bool.TrueString);
+                await session.Send(message, options, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

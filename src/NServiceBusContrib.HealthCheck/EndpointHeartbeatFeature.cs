@@ -15,6 +15,11 @@ class EndpointHeartbeatFeature : Feature
         var endpointName = context.Settings.EndpointName();
         var settings = context.Settings.TryGet<HeartbeatSettings>(out var configured) ? configured : new HeartbeatSettings();
 
+        // Keep heartbeats out of the audit queue when AuditProcessedMessagesTo is enabled.
+        context.Pipeline.Register(
+            new HeartbeatAuditFilterBehavior(),
+            "Excludes NServiceBusContrib liveness heartbeat messages from the audit queue.");
+
         context.RegisterStartupTask(serviceProvider =>
             new EndpointHeartbeatStartupTask(endpointName, settings, serviceProvider));
     }

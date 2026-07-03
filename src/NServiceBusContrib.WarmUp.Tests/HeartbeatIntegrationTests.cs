@@ -61,6 +61,58 @@ public class HeartbeatIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task Heartbeats_are_not_audited()
+    {
+        var storage = Path.Combine(Path.GetTempPath(), "nsbcontrib-heartbeat", Guid.NewGuid().ToString("N"));
+        var registry = new CountingStatusRegistry();
+        const string endpointName = "HeartbeatContrib.AuditTest";
+
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddSingleton<IEndpointStatusRegistry>(registry);
+
+        var endpoint = new EndpointConfiguration(endpointName);
+        endpoint.UseTransport(new LearningTransport { StorageDirectory = storage });
+        endpoint.UseSerialization<SystemJsonSerializer>();
+        endpoint.SendFailedMessagesTo("error");
+        endpoint.AuditProcessedMessagesTo("audit");   // auditing ON
+        endpoint.EnableInstallers();
+        endpoint.AssemblyScanner().Disable = true;
+
+        endpoint.WarmUp();
+        endpoint.EnableLivenessHeartbeat(heartbeat =>
+        {
+            heartbeat.Interval(TimeSpan.FromMilliseconds(150));
+            heartbeat.StaleAfter(TimeSpan.FromSeconds(30));
+        });
+
+        builder.Services.AddNServiceBusEndpoint(endpoint);
+        builder.Services.AddNServiceBusWarmUp();
+
+        using var host = builder.Build();
+        await host.StartAsync();
+        try
+        {
+            // Make sure heartbeats were actually processed, so "nothing audited" is not vacuous
+            // (the seed is 1; >= 3 means at least two heartbeats round-tripped through the pump).
+            await WaitForAsync(() => registry.HeartbeatCount >= 3, TimeSpan.FromSeconds(15));
+            Assert.True(registry.HeartbeatCount >= 3, $"expected heartbeats to be processed, observed {registry.HeartbeatCount}");
+        }
+        finally
+        {
+            await host.StopAsync();
+        }
+
+        // Despite auditing being enabled and heartbeats being processed, none reached the audit queue.
+        var auditDir = Path.Combine(storage, "audit");
+        var auditedHeartbeat = Directory.Exists(auditDir)
+            && Directory.EnumerateFiles(auditDir, "*", SearchOption.AllDirectories)
+                .Any(file => File.ReadAllText(file).Contains(nameof(EndpointHeartbeat), StringComparison.Ordinal));
+
+        TryDelete(storage);
+        Assert.False(auditedHeartbeat, "liveness heartbeat messages must not be forwarded to the audit queue");
+    }
+
     static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;

@@ -66,3 +66,6 @@ endpointConfiguration.EnableLivenessHeartbeat(heartbeat =>
 The endpoint periodically sends a heartbeat to its own queue; processing it keeps
 the endpoint live. If the pump stops processing, the heartbeat goes stale and the
 liveness check reports the endpoint unhealthy.
+
+Heartbeats are automatically **excluded from auditing**, so they never reach the
+audit queue even when `AuditProcessedMessagesTo(...)` is enabled.

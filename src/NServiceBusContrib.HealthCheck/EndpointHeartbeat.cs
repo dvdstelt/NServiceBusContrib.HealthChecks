@@ -6,6 +6,12 @@ namespace NServiceBusContrib.HealthCheck;
 /// </summary>
 public class EndpointHeartbeat
 {
+    /// <summary>
+    /// Header stamped on outgoing heartbeats so the audit-pipeline filter can exclude them from
+    /// the audit queue.
+    /// </summary>
+    internal const string HeaderKey = "NServiceBusContrib.HealthCheck.Heartbeat";
+
     /// <summary>The name of the endpoint that sent the heartbeat.</summary>
     public string EndpointName { get; init; } = string.Empty;
 

@@ -171,6 +171,11 @@ sequenceDiagram
 If the pump stalls, no heartbeat is processed, the timestamp ages past
 `StaleAfter`, and the health check reports the endpoint unhealthy.
 
+Heartbeats are **excluded from auditing**: each is stamped with a header and an
+audit-pipeline behavior (`Behavior<IAuditContext>`) short-circuits it, so even
+with `AuditProcessedMessagesTo(...)` enabled the heartbeats never reach the audit
+queue. (Harmless when auditing is off — the audit pipeline isn't invoked.)
+
 ## Handler registration ([Handler] / source generation)
 
 `EndpointHeartbeatHandler` is a NServiceBus 10.2 `[Handler]` POCO: it does **not**
