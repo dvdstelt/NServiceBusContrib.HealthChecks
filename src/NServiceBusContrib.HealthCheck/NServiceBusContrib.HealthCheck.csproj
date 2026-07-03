@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <PackageId>NServiceBusContrib.HealthCheck</PackageId>
-    <Version>0.0.0</Version>
     <Description>Aggregates the readiness of every NServiceBus endpoint in the process into a single health check, suitable for a container /health endpoint.</Description>
     <PackageTags>NServiceBus;healthcheck;readiness;docker;kubernetes</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

@@ -37,25 +37,25 @@ dotnet test src/NServiceBusContrib.slnx
 
 ## Publishing
 
-Each package has a deploy script at the repo root that bumps its `<Version>`
-(SemVer), builds a Release package, and pushes it to NuGet. Pass exactly one of
-`-major` / `-minor` / `-patch`:
+Publishing is tag-driven via GitHub Actions ([`.github/workflows/publish.yml`](.github/workflows/publish.yml)).
+The package version is derived from the git tag by [MinVer](https://github.com/adamralph/minver),
+so pushing a SemVer tag builds, tests, and pushes both packages to NuGet at that
+version:
 
 ```bash
-export NUGET_API_KEY=<your key>
+# stable release from main
+git tag 1.0.0
+git push origin 1.0.0
 
-# publish WarmUp first (HealthCheck depends on it)
-./deploy-warmup.sh -minor
-./deploy-healthcheck.sh -minor
-
-# preview without publishing (builds, doesn't push, leaves the .csproj unchanged)
-./deploy-warmup.sh -patch --dry-run
+# prerelease from a branch
+git tag 1.1.0-alpha.1
+git push origin 1.1.0-alpha.1
 ```
 
-The version is written back to the `.csproj` only after a successful push. Both
-scripts run the tests before packing. Use `--source` to target a different feed
-and `--dry-run` to rehearse. `HealthCheck` references `WarmUp` at WarmUp's current
-`<Version>`, so publish `WarmUp` at that version first.
+Both packages are versioned in lockstep from the tag (so `HealthCheck 1.0.0`
+depends on `WarmUp 1.0.0`). Set the `NUGET_API_KEY` repository secret for the push
+to succeed. Untagged local builds get a MinVer height-based prerelease version
+(e.g. `0.0.0-alpha.0.N`); there is no `<Version>` in source.
 
 ## Status
 

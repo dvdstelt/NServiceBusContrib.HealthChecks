@@ -24,4 +24,10 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <!-- Package version is derived from git tags by MinVer: tag 1.0.0 -> 1.0.0;
+       tag 1.1.0-alpha.1 on a branch -> that prerelease. No <Version> in source. -->
+  <ItemGroup>
+    <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="all" />
+  </ItemGroup>
+
 </Project>

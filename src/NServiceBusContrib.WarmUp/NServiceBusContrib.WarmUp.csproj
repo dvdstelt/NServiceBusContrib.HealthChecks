@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <PackageId>NServiceBusContrib.WarmUp</PackageId>
-    <Version>0.0.0</Version>
     <Description>Blocks NServiceBus message processing until user-defined warm-up actions have completed.</Description>
     <PackageTags>NServiceBus;warmup;startup;readiness</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

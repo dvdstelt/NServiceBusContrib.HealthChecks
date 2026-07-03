@@ -1,0 +1,41 @@
+name: Publish
+
+# Publish both packages to NuGet when a SemVer tag is pushed. MinVer derives the
+# package version from the tag, so:
+#   git tag 1.0.0        && git push origin 1.0.0          -> 1.0.0 (stable)
+#   git tag 1.1.0-alpha.1 && git push origin 1.1.0-alpha.1 -> 1.1.0-alpha.1 (prerelease)
+# The tag can be on any branch (release stable from main, prereleases from a branch).
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history + tags for MinVer)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Test
+        run: dotnet test src/NServiceBusContrib.slnx -c Release
+
+      - name: Pack
+        run: dotnet pack src/NServiceBusContrib.slnx -c Release -o artifacts
+
+      - name: Push to NuGet
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key "${{ secrets.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
