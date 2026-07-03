@@ -12,12 +12,16 @@ namespace NServiceBusContrib.HealthCheck;
 sealed class EndpointsHealthCheck(
     IEndpointStatusRegistry registry,
     TimeProvider timeProvider,
-    EndpointHealthKind kind) : IHealthCheck
+    EndpointHealthKind kind,
+    EndpointHealthLog? healthLog = null) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         var endpoints = registry.GetAll();
         var now = timeProvider.GetUtcNow();
+
+        // Log health transitions (warning on unhealthy, information on recovery), deduped.
+        healthLog?.Evaluate(endpoints, now);
 
         var result = kind == EndpointHealthKind.Liveness
             ? EvaluateLiveness(endpoints, now, context)
@@ -47,7 +51,7 @@ sealed class EndpointsHealthCheck(
                 problems.Add($"{endpoint.EndpointName} is {endpoint.State}");
                 data[endpoint.EndpointName] = endpoint.State.ToString();
             }
-            else if (IsHeartbeatStale(endpoint, now, out var age))
+            else if (endpoint.IsHeartbeatStale(now, out var age))
             {
                 problems.Add($"{endpoint.EndpointName} heartbeat is stale (last seen {age.TotalSeconds:F0}s ago)");
                 data[endpoint.EndpointName] = "Stale";
@@ -78,7 +82,7 @@ sealed class EndpointsHealthCheck(
                 problems.Add($"{endpoint.EndpointName} is Stopped");
                 data[endpoint.EndpointName] = endpoint.State.ToString();
             }
-            else if (IsHeartbeatStale(endpoint, now, out var age))
+            else if (endpoint.IsHeartbeatStale(now, out var age))
             {
                 problems.Add($"{endpoint.EndpointName} heartbeat is stale (last seen {age.TotalSeconds:F0}s ago)");
                 data[endpoint.EndpointName] = "Stale";
@@ -92,17 +96,5 @@ sealed class EndpointsHealthCheck(
         return problems.Count > 0
             ? new HealthCheckResult(context.Registration.FailureStatus, string.Join(", ", problems), data: data)
             : HealthCheckResult.Healthy($"All {endpoints.Count} endpoint(s) live.", data);
-    }
-
-    static bool IsHeartbeatStale(EndpointStatus endpoint, DateTimeOffset now, out TimeSpan age)
-    {
-        age = TimeSpan.Zero;
-        if (endpoint.LastHeartbeat is not { } lastHeartbeat || endpoint.HeartbeatStaleAfter is not { } staleAfter)
-        {
-            return false;
-        }
-
-        age = now - lastHeartbeat;
-        return age > staleAfter;
     }
 }

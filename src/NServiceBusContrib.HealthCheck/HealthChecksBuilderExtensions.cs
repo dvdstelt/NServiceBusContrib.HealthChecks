@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NServiceBusContrib.WarmUp;
 
@@ -80,12 +81,17 @@ public static class HealthChecksBuilderExtensions
         // The status registry lives in the WarmUp package; ensure it is registered.
         builder.Services.AddNServiceBusWarmUp();
 
+        // The transition logger is always on: the check logs when an endpoint becomes unhealthy or
+        // recovers (deduped). The optional background monitor drives the same log without probes.
+        builder.Services.TryAddSingleton<EndpointHealthLog>();
+
         return builder.Add(new HealthCheckRegistration(
             name,
             provider => new EndpointsHealthCheck(
                 provider.GetRequiredService<IEndpointStatusRegistry>(),
                 provider.GetRequiredService<TimeProvider>(),
-                kind),
+                kind,
+                provider.GetService<EndpointHealthLog>()),
             failureStatus,
             tags));
     }

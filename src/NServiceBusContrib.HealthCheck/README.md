@@ -69,3 +69,14 @@ liveness check reports the endpoint unhealthy.
 
 Heartbeats are automatically **excluded from auditing**, so they never reach the
 audit queue even when `AuditProcessedMessagesTo(...)` is enabled.
+
+## Logging
+
+Health transitions are logged (deduped): a **warning** when an endpoint becomes
+unhealthy (stopped or heartbeat stale) and **information** when it recovers. This is
+on by default and logged when a health check runs (on a probe). To log transitions
+even without probes, add the optional background monitor:
+
+```csharp
+builder.Services.AddNServiceBusEndpointHealthMonitor();   // polls every 30s (configurable)
+```

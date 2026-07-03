@@ -182,6 +182,28 @@ Heartbeats are only sent when a status registry is present (i.e. the health chec
 it is a no-op (nothing sends), so the same shared endpoint configuration can be
 reused by hosts that don't expose `/health`.
 
+## Logging health transitions
+
+Health status is also logged, on **transitions** only (deduped — once per change, not per
+probe): a `Warning` when an endpoint becomes unhealthy (stopped, or its heartbeat goes stale)
+and an `Information` when it recovers. `Starting`/`Ready` are not logged — that's normal
+warm-up, handled by readiness gating.
+
+This is **on by default** whenever the health checks are registered: the check logs the
+transition the next time it runs (i.e. on a probe), via a small singleton that remembers each
+endpoint's last state.
+
+For hosts that may go long stretches without probing `/health` — or to catch a hung endpoint
+proactively — add the optional background monitor, which evaluates on a timer and logs the same
+transitions even with no probe:
+
+```csharp
+builder.Services.AddNServiceBusEndpointHealthMonitor();                       // default: every 30s
+builder.Services.AddNServiceBusEndpointHealthMonitor(TimeSpan.FromSeconds(10));
+```
+
+Both paths drive the same log, so enabling the monitor alongside the checks does not double-log.
+
 ## Handler registration ([Handler] / source generation)
 
 `EndpointHeartbeatHandler` is a NServiceBus 10.2 `[Handler]` POCO: it does **not**
