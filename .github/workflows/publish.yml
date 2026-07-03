@@ -1,16 +1,16 @@
 name: Publish
 
 # Publish both packages to NuGet when a SemVer tag is pushed. MinVer derives the
-# package version from the tag, so:
-#   git tag 1.0.0        && git push origin 1.0.0          -> 1.0.0 (stable)
-#   git tag 1.1.0-alpha.1 && git push origin 1.1.0-alpha.1 -> 1.1.0-alpha.1 (prerelease)
-# The tag can be on any branch (release stable from main, prereleases from a branch).
+# version from the tag, so the tag name IS the package version.
 #
-# Uses NuGet trusted publishing (OIDC) - no long-lived API key. Configure a policy at
-# nuget.org -> Trusted Publishing:
-#   Repository Owner: dvdstelt
-#   Repository:       NServiceBusContrib.HealthChecks
-#   Workflow File:    publish.yml
+# Policy (enforced by the "Validate tag" step):
+#   - on main:      stable tags only (e.g. 1.0.0). alpha/beta tags on main are rejected.
+#   - on a branch:  allowed only if the tagged commit has an open PR, for prereleases
+#                   (e.g. 1.1.0-alpha.1 / 1.1.0-beta.1).
+#   - anything else (a tag on neither main nor a PR branch) is rejected.
+#
+# Trusted publishing (OIDC) - no long-lived API key. nuget.org policy:
+#   Owner: dvdstelt / Repository: NServiceBusContrib.HealthChecks / Workflow: publish.yml
 on:
   push:
     tags:
@@ -24,12 +24,40 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write        # request the OIDC token for trusted publishing
+      id-token: write        # OIDC token for trusted publishing
+      pull-requests: read    # to check whether the tagged commit has an open PR
     steps:
       - name: Checkout (full history + tags for MinVer)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Validate tag (main = stable, PR branch = prerelease)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin main || true
+
+          case "$TAG" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then on_main=true; else on_main=false; fi
+          echo "tag=$TAG prerelease=$prerelease on_main=$on_main"
+
+          if $on_main; then
+            if $prerelease; then
+              echo "::error::Prerelease (alpha/beta) tags are not allowed on main. Tag stable versions on main; tag prereleases on a PR branch."
+              exit 1
+            fi
+            echo "Stable release from main: OK."
+          else
+            open_prs=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '[.[] | select(.state == "open")] | length')
+            if [ "${open_prs:-0}" -eq 0 ]; then
+              echo "::error::This tag is not on main and has no open PR. Publish only from main (stable) or a commit with an open PR (prerelease)."
+              exit 1
+            fi
+            echo "Prerelease from a PR branch ($open_prs open PR(s)): OK."
+          fi
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

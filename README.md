@@ -43,19 +43,22 @@ so pushing a SemVer tag builds, tests, and pushes both packages to NuGet at that
 version:
 
 ```bash
-# stable release from main
+# stable release: tag on main (alpha/beta tags on main are rejected)
 git tag 1.0.0
 git push origin 1.0.0
 
-# prerelease from a branch
+# prerelease: tag on a branch that has an open PR
 git tag 1.1.0-alpha.1
 git push origin 1.1.0-alpha.1
 ```
 
-Both packages are versioned in lockstep from the tag (so `HealthCheck 1.0.0`
-depends on `WarmUp 1.0.0`). Set the `NUGET_API_KEY` repository secret for the push
-to succeed. Untagged local builds get a MinVer height-based prerelease version
-(e.g. `0.0.0-alpha.0.N`); there is no `<Version>` in source.
+The workflow validates the tag before publishing: **stable versions must be
+tagged on `main`**, and **prereleases must be on a commit that has an open PR** —
+a tag on neither is rejected. Both packages are versioned in lockstep from the tag
+(so `HealthCheck 1.0.0` depends on `WarmUp 1.0.0`). Publishing uses NuGet trusted
+publishing (OIDC), so no API-key secret is needed. Untagged local builds get a
+MinVer height-based prerelease version (e.g. `0.0.0-alpha.0.N`); there is no
+`<Version>` in source.
 
 ## Status
 
