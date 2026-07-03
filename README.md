@@ -35,6 +35,28 @@ dotnet test src/NServiceBusContrib.slnx
 | [`docs/healthcheck.md`](docs/healthcheck.md) | HealthCheck design: aggregation and heartbeat liveness. |
 | [`docs/ideas.md`](docs/ideas.md) | Backlog of add-on ideas. |
 
+## Publishing
+
+Each package has a deploy script at the repo root that bumps its `<Version>`
+(SemVer), builds a Release package, and pushes it to NuGet. Pass exactly one of
+`-major` / `-minor` / `-patch`:
+
+```bash
+export NUGET_API_KEY=<your key>
+
+# publish WarmUp first (HealthCheck depends on it)
+./deploy-warmup.sh -minor
+./deploy-healthcheck.sh -minor
+
+# preview without publishing (builds, doesn't push, leaves the .csproj unchanged)
+./deploy-warmup.sh -patch --dry-run
+```
+
+The version is written back to the `.csproj` only after a successful push. Both
+scripts run the tests before packing. Use `--source` to target a different feed
+and `--dry-run` to rehearse. `HealthCheck` references `WarmUp` at WarmUp's current
+`<Version>`, so publish `WarmUp` at that version first.
+
 ## Status
 
 The warm-up and health-check add-ons cover readiness (warm-up gating) and
