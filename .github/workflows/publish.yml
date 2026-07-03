@@ -5,6 +5,12 @@ name: Publish
 #   git tag 1.0.0        && git push origin 1.0.0          -> 1.0.0 (stable)
 #   git tag 1.1.0-alpha.1 && git push origin 1.1.0-alpha.1 -> 1.1.0-alpha.1 (prerelease)
 # The tag can be on any branch (release stable from main, prereleases from a branch).
+#
+# Uses NuGet trusted publishing (OIDC) - no long-lived API key. Configure a policy at
+# nuget.org -> Trusted Publishing:
+#   Repository Owner: dvdstelt
+#   Repository:       NServiceBusContrib.HealthChecks
+#   Workflow File:    publish.yml
 on:
   push:
     tags:
@@ -16,6 +22,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write        # request the OIDC token for trusted publishing
     steps:
       - name: Checkout (full history + tags for MinVer)
         uses: actions/checkout@v4
@@ -33,9 +42,15 @@ jobs:
       - name: Pack
         run: dotnet pack src/NServiceBusContrib.slnx -c Release -o artifacts
 
+      - name: NuGet login (OIDC -> short-lived API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: dvdstelt
+
       - name: Push to NuGet
         run: >
           dotnet nuget push "artifacts/*.nupkg"
-          --api-key "${{ secrets.NUGET_API_KEY }}"
+          --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate

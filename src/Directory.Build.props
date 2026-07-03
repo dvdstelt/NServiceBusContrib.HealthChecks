@@ -11,8 +11,8 @@
   <!-- Shared NuGet package metadata for the add-on projects. -->
   <PropertyGroup>
     <Authors>Dennis van der Stelt</Authors>
-    <PackageProjectUrl>https://github.com/dvdstelt/NServiceBusContrib</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/dvdstelt/NServiceBusContrib</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/dvdstelt/NServiceBusContrib.HealthChecks</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dvdstelt/NServiceBusContrib.HealthChecks</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
