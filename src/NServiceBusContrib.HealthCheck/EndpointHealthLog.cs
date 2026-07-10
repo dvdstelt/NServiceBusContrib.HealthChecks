@@ -6,7 +6,7 @@ namespace NServiceBusContrib.HealthCheck;
 /// <summary>
 /// Remembers each endpoint's last-observed health and logs <em>transitions</em>: a warning when an
 /// endpoint becomes unhealthy (stopped, or its heartbeat has gone stale) and an information message
-/// when it recovers. Deduped, so it logs once per change no matter how often it is evaluated —
+/// when it recovers. Deduped, so it logs once per change no matter how often it is evaluated:
 /// driven by the health check on each probe, and/or by the optional background monitor.
 /// </summary>
 sealed class EndpointHealthLog(ILogger<EndpointHealthLog> logger)

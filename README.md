@@ -53,8 +53,7 @@ git push origin 1.1.0-alpha.1
 ```
 
 The workflow validates the tag before publishing: **stable versions must be
-tagged on `main`**, and **prereleases must be on a commit that has an open PR** —
-a tag on neither is rejected. Both packages are versioned in lockstep from the tag
+tagged on `main`**, and **prereleases must be on a commit that has an open PR**; a tag on neither is rejected. Both packages are versioned in lockstep from the tag
 (so `HealthCheck 1.0.0` depends on `WarmUp 1.0.0`). Publishing uses NuGet trusted
 publishing (OIDC), so no API-key secret is needed. Untagged local builds get a
 MinVer height-based prerelease version (e.g. `0.0.0-alpha.0.N`); there is no

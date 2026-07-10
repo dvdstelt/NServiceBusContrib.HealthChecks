@@ -34,7 +34,7 @@ sequenceDiagram
 ```
 
 Actions run **sequentially in registration order**, so dependencies between them
-are predictable. Any exception fails endpoint start (the pump never opens) —
+are predictable. Any exception fails endpoint start (the pump never opens):
 warming up "half way" and then processing is worse than failing fast.
 
 ## Readiness states
@@ -42,7 +42,7 @@ warming up "half way" and then processing is worse than failing fast.
 The same startup task drives the endpoint's readiness in the registry. `Stopped`
 covers a graceful shutdown **and** a crash: when NServiceBus tears an endpoint
 down after a critical error, the feature's `OnStop` runs, flipping it out of
-`Ready` — so a single faulted endpoint makes `/health` report unhealthy, without
+`Ready`, so a single faulted endpoint makes `/health` report unhealthy, without
 the package overriding the user's critical-error action.
 
 ```mermaid
@@ -86,7 +86,7 @@ public interface IWarmUpTask
 }
 ```
 
-`config.WarmUp()` (no argument) enables the feature without inline actions — useful
+`config.WarmUp()` (no argument) enables the feature without inline actions; useful
 to opt an endpoint into readiness tracking only.
 
 The single host-level call is `builder.Services.AddNServiceBusWarmUp()`, which
@@ -99,6 +99,6 @@ The warm-up `Feature` is enabled explicitly from `config.WarmUp(...)` via
 `EnableFeature<WarmUpFeature>()` (the pattern NServiceBus 11 will require;
 `EnableByDefault` is being retired). Because `EnableFeature<T>()` adds the feature
 directly rather than relying on discovery, it works whether or not assembly
-scanning is enabled — so multi-endpoint hosts (which disable scanning) are fully
+scanning is enabled, so multi-endpoint hosts (which disable scanning) are fully
 supported. The trade-off is that warm-up is opt-in per endpoint: an endpoint that
 never calls `config.WarmUp(...)` gets no warm-up and is not tracked for readiness.

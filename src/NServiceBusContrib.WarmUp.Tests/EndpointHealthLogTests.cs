@@ -17,7 +17,7 @@ public class EndpointHealthLogTests
         var logger = new ListLogger<EndpointHealthLog>();
         var log = new EndpointHealthLog(logger);
 
-        log.Evaluate([Endpoint("Sales", EndpointReadinessState.Ready)], Now);      // healthy — nothing
+        log.Evaluate([Endpoint("Sales", EndpointReadinessState.Ready)], Now);      // healthy: nothing
         log.Evaluate([Endpoint("Sales", EndpointReadinessState.Stopped)], Now);    // -> warning
 
         var entry = Assert.Single(logger.Entries);
@@ -49,7 +49,7 @@ public class EndpointHealthLogTests
         var log = new EndpointHealthLog(logger);
         var endpoint = Endpoint("Sales", EndpointReadinessState.Ready, heartbeat: Now, staleAfter: TimeSpan.FromSeconds(30));
 
-        log.Evaluate([endpoint], Now.AddSeconds(20));   // within window — healthy
+        log.Evaluate([endpoint], Now.AddSeconds(20));   // within window: healthy
         log.Evaluate([endpoint], Now.AddSeconds(31));   // stale -> warning
 
         var entry = Assert.Single(logger.Entries);

@@ -29,6 +29,6 @@ Shared MSBuild settings (target framework, nullable, package metadata) live in
 
 The design, with Mermaid diagrams, is under [`../docs`](../docs):
 
-- [`architecture.md`](../docs/architecture.md) — how the two packages fit together.
-- [`warmup.md`](../docs/warmup.md) — warm-up-before-pump and readiness states.
-- [`healthcheck.md`](../docs/healthcheck.md) — `/health` aggregation and heartbeat liveness.
+- [`architecture.md`](../docs/architecture.md): how the two packages fit together.
+- [`warmup.md`](../docs/warmup.md): warm-up-before-pump and readiness states.
+- [`healthcheck.md`](../docs/healthcheck.md): `/health` aggregation and heartbeat liveness.

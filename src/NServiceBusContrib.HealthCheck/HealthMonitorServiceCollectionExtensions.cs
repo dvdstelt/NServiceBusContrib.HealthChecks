@@ -15,7 +15,7 @@ public static class HealthMonitorServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="interval">How often to poll. Defaults to 30 seconds.</param>
-    public static IServiceCollection AddNServiceBusEndpointHealthMonitor(this IServiceCollection services, TimeSpan? interval = null)
+    public static IServiceCollection AddNServiceBusHealthMonitor(this IServiceCollection services, TimeSpan? interval = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
