@@ -11,9 +11,14 @@
   <!-- Shared NuGet package metadata for the add-on projects. -->
   <PropertyGroup>
     <Authors>Dennis van der Stelt</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/dvdstelt/NServiceBusContrib.HealthChecks</PackageProjectUrl>
     <RepositoryUrl>https://github.com/dvdstelt/NServiceBusContrib.HealthChecks</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <!-- Debuggable, deterministic packages: SourceLink ships with the SDK; the snupkg is
+         pushed automatically alongside the nupkg by dotnet nuget push. -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">

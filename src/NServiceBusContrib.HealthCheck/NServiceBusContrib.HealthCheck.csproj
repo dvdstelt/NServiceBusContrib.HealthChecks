@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <PackageId>NServiceBusContrib.HealthCheck</PackageId>
-    <Description>Aggregates the readiness of every NServiceBus endpoint in the process into a single health check, suitable for a container /health endpoint.</Description>
-    <PackageTags>NServiceBus;healthcheck;readiness;docker;kubernetes</PackageTags>
+    <Description>Readiness and liveness health checks for NServiceBus: aggregates every endpoint in the process, with heartbeat-based liveness, suitable for container /health probes.</Description>
+    <PackageTags>NServiceBus;healthcheck;readiness;liveness;heartbeat;warmup;docker;kubernetes</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
