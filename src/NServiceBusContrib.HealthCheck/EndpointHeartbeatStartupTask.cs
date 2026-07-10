@@ -20,7 +20,7 @@ sealed class EndpointHeartbeatStartupTask(
     readonly CancellationTokenSource stopping = new();
     Task? loop;
 
-    protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken)
+    protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
     {
         var registry = serviceProvider.GetService<IEndpointStatusRegistry>();
         if (registry is null)
@@ -42,7 +42,7 @@ sealed class EndpointHeartbeatStartupTask(
         return Task.CompletedTask;
     }
 
-    protected override async Task OnStop(IMessageSession session, CancellationToken cancellationToken)
+    protected override async Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
     {
         await stopping.CancelAsync().ConfigureAwait(false);
         if (loop is not null)
@@ -53,8 +53,9 @@ sealed class EndpointHeartbeatStartupTask(
                 // cancellation cannot block shutdown indefinitely.
                 await loop.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                // The host's shutdown token cut the wait short; abandon the loop.
             }
         }
 
@@ -67,26 +68,34 @@ sealed class EndpointHeartbeatStartupTask(
         var timeProvider = serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
 
         using var timer = new PeriodicTimer(settings.ResolvedInterval, timeProvider);
-        while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+        try
         {
-            try
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
-                // Send to this endpoint's own queue (like SendLocal) but stamp a header so the
-                // audit filter can keep the heartbeat out of the audit queue.
-                var options = new SendOptions();
-                options.RouteToThisEndpoint();
-                options.SetHeader(EndpointHeartbeat.HeaderKey, bool.TrueString);
-                await session.Send(message, options, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    // Send to this endpoint's own queue (like SendLocal) but stamp a header so the
+                    // audit filter can keep the heartbeat out of the audit queue.
+                    var options = new SendOptions();
+                    options.RouteToThisEndpoint();
+                    options.SetHeader(EndpointHeartbeat.HeaderKey, bool.TrueString);
+                    await session.Send(message, options, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    // A failed heartbeat send is not fatal; the endpoint will go stale if it keeps failing.
+                    logger?.LogWarning(ex, "Failed to send heartbeat for endpoint '{EndpointName}'.", endpointName);
+                }
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception ex)
-            {
-                // A failed heartbeat send is not fatal; the endpoint will go stale if it keeps failing.
-                logger?.LogWarning(ex, "Failed to send heartbeat for endpoint '{EndpointName}'.", endpointName);
-            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // OnStop signalled the stop; the loop completes instead of faulting, so OnStop's await
+            // of this task only ever observes the host's own shutdown token.
         }
     }
 }

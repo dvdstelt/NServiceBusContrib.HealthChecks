@@ -13,7 +13,7 @@ sealed class WarmUpStartupTask(
     IReadOnlyList<Func<IServiceProvider, CancellationToken, Task>> actions,
     IServiceProvider serviceProvider) : FeatureStartupTask
 {
-    protected override async Task OnStart(IMessageSession session, CancellationToken cancellationToken)
+    protected override async Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
     {
         var registry = serviceProvider.GetService<IEndpointStatusRegistry>();
         registry?.Report(endpointName, EndpointReadinessState.Starting);
@@ -26,7 +26,7 @@ sealed class WarmUpStartupTask(
         registry?.Report(endpointName, EndpointReadinessState.Ready);
     }
 
-    protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken)
+    protected override Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
     {
         serviceProvider.GetService<IEndpointStatusRegistry>()
             ?.Report(endpointName, EndpointReadinessState.Stopped);

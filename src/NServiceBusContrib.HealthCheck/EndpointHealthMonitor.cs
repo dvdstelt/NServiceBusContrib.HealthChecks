@@ -15,7 +15,7 @@ sealed class EndpointHealthMonitor(
     EndpointHealthLog healthLog,
     TimeSpan interval) : BackgroundService
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         using var timer = new PeriodicTimer(interval, timeProvider);
         try
@@ -24,9 +24,9 @@ sealed class EndpointHealthMonitor(
             {
                 healthLog.Evaluate(registry.GetAll(), timeProvider.GetUtcNow());
             }
-            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false));
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false));
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             // shutting down
         }

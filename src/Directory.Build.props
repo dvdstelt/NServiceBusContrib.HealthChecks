@@ -28,6 +28,7 @@
        tag 1.1.0-alpha.1 on a branch -> that prerelease. No <Version> in source. -->
   <ItemGroup>
     <PackageReference Include="MinVer" Version="7.0.0" PrivateAssets="all" />
+    <PackageReference Include="Particular.Analyzers" Version="1.8.0" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

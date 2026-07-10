@@ -11,5 +11,5 @@ public interface IWarmUpTask
     /// Performs the warm-up work. The message pump does not open until this completes.
     /// Throwing fails endpoint start.
     /// </summary>
-    Task WarmUpAsync(CancellationToken cancellationToken);
+    Task WarmUpAsync(CancellationToken cancellationToken = default);
 }
