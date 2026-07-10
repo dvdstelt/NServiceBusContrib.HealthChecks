@@ -20,7 +20,7 @@ sealed class WarmUpStartupTask(
 
         foreach (var action in actions)
         {
-            await action(serviceProvider, cancellationToken);
+            await action(serviceProvider, cancellationToken).ConfigureAwait(false);
         }
 
         registry?.Report(endpointName, EndpointReadinessState.Ready);

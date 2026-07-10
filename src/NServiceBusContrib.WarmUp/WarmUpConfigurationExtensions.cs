@@ -29,9 +29,9 @@ public static class WarmUpConfigurationExtensions
     }
 
     /// <summary>
-    /// Enables warm-up for the endpoint without configuring inline actions. Use this
-    /// when warm-up tasks are registered against the service collection, or to opt an
-    /// endpoint into readiness tracking when assembly scanning is disabled.
+    /// Enables warm-up for the endpoint without configuring any warm-up actions. Use this to opt
+    /// an endpoint into readiness tracking (and the health checks built on it) when there is
+    /// nothing to warm up.
     /// </summary>
     public static EndpointConfiguration WarmUp(this EndpointConfiguration endpointConfiguration)
     {

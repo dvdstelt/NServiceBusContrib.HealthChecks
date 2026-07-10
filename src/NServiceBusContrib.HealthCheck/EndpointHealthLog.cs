@@ -38,7 +38,8 @@ sealed class EndpointHealthLog(ILogger<EndpointHealthLog> logger)
     }
 
     // "Unhealthy" here is a genuinely bad state, not warm-up: an endpoint that stopped, or whose
-    // heartbeat went stale. Starting/Ready are not logged (readiness gating handles those).
+    // heartbeat went stale after it became Ready. Starting is never unhealthy, even with a stale
+    // seeded heartbeat: the pump is not open during warm-up, so heartbeats cannot be processed.
     static (bool Unhealthy, string Reason) Assess(EndpointStatus endpoint, DateTimeOffset now)
     {
         if (endpoint.State == EndpointReadinessState.Stopped)
@@ -46,7 +47,7 @@ sealed class EndpointHealthLog(ILogger<EndpointHealthLog> logger)
             return (true, "stopped");
         }
 
-        if (endpoint.IsHeartbeatStale(now, out var age))
+        if (endpoint.State == EndpointReadinessState.Ready && endpoint.IsHeartbeatStale(now, out var age))
         {
             return (true, $"heartbeat stale (last seen {age.TotalSeconds:F0}s ago)");
         }

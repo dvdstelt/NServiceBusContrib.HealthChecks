@@ -70,6 +70,19 @@ public class EndpointHealthLogTests
     }
 
     [Fact]
+    public void Does_not_warn_for_starting_with_a_stale_seeded_heartbeat()
+    {
+        // A slow warm-up is normal, not an incident: staleness only counts once the endpoint is Ready.
+        var logger = new ListLogger<EndpointHealthLog>();
+        var log = new EndpointHealthLog(logger);
+        var endpoint = Endpoint("Sales", EndpointReadinessState.Starting, heartbeat: Now, staleAfter: TimeSpan.FromSeconds(30));
+
+        log.Evaluate([endpoint], Now.AddMinutes(5));
+
+        Assert.Empty(logger.Entries);
+    }
+
+    [Fact]
     public async Task Background_monitor_logs_unhealthy_endpoints()
     {
         var registry = new EndpointStatusRegistry(TimeProvider.System);

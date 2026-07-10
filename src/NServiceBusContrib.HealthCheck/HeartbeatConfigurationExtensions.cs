@@ -21,6 +21,18 @@ public static class HeartbeatConfigurationExtensions
 
         var settings = new HeartbeatSettings();
         configure?.Invoke(settings);
+
+        if (settings.ResolvedStaleAfter <= settings.ResolvedInterval)
+        {
+            // A staleness window at or below the send interval guarantees flapping: every heartbeat
+            // goes stale before the next one arrives, so health would oscillate on every beat.
+            throw new ArgumentException(
+                $"StaleAfter ({settings.ResolvedStaleAfter}) must be longer than Interval ({settings.ResolvedInterval}), " +
+                "otherwise the heartbeat goes stale between beats and the endpoint's health flaps on every interval. " +
+                "Leave StaleAfter unset to default to three intervals.",
+                nameof(configure));
+        }
+
         endpointConfiguration.GetSettings().Set(settings);
 
         endpointConfiguration.EnableFeature<EndpointHeartbeatFeature>();

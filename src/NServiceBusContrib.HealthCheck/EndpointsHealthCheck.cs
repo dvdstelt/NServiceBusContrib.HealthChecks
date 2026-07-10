@@ -23,22 +23,25 @@ sealed class EndpointsHealthCheck(
         // Log health transitions (warning on unhealthy, information on recovery), deduped.
         healthLog?.Evaluate(endpoints, now);
 
-        var result = kind == EndpointHealthKind.Liveness
-            ? EvaluateLiveness(endpoints, now, context)
-            : EvaluateReadiness(endpoints, now, context);
-
-        return Task.FromResult(result);
+        return Task.FromResult(Evaluate(endpoints, now, context));
     }
 
-    // Readiness: every endpoint must have completed warm-up (Ready) and, where heartbeat
-    // liveness is enabled, have a fresh heartbeat. A still-starting endpoint is not ready.
-    static HealthCheckResult EvaluateReadiness(IReadOnlyCollection<EndpointStatus> endpoints, DateTimeOffset now, HealthCheckContext context)
+    // Readiness: every endpoint must have completed warm-up (Ready) and, where heartbeat liveness
+    // is enabled, have a fresh heartbeat. A still-starting endpoint is not ready.
+    // Liveness: an endpoint is dead only if it Stopped or, once Ready, its heartbeat went stale.
+    // Starting is alive regardless of any seeded heartbeat: the pump is not open yet, so heartbeats
+    // cannot be processed, and a long warm-up must never trip a liveness probe into a restart.
+    HealthCheckResult Evaluate(IReadOnlyCollection<EndpointStatus> endpoints, DateTimeOffset now, HealthCheckContext context)
     {
         if (endpoints.Count == 0)
         {
-            return new HealthCheckResult(
-                context.Registration.FailureStatus,
-                description: "No NServiceBus endpoints have started yet.");
+            // No endpoint has reported status: either the process is still booting, or no endpoint
+            // enabled WarmUp(). Booting is alive but not ready.
+            return kind == EndpointHealthKind.Liveness
+                ? HealthCheckResult.Healthy("No NServiceBus endpoints have reported status yet; the process is starting.")
+                : new HealthCheckResult(
+                    context.Registration.FailureStatus,
+                    description: "No NServiceBus endpoints have reported status yet. Endpoints opt into tracking by enabling WarmUp() on their EndpointConfiguration.");
         }
 
         var data = new Dictionary<string, object>(endpoints.Count);
@@ -46,12 +49,12 @@ sealed class EndpointsHealthCheck(
 
         foreach (var endpoint in endpoints)
         {
-            if (endpoint.State != EndpointReadinessState.Ready)
+            if (IsProblemState(endpoint.State))
             {
                 problems.Add($"{endpoint.EndpointName} is {endpoint.State}");
                 data[endpoint.EndpointName] = endpoint.State.ToString();
             }
-            else if (endpoint.IsHeartbeatStale(now, out var age))
+            else if (endpoint.State == EndpointReadinessState.Ready && endpoint.IsHeartbeatStale(now, out var age))
             {
                 problems.Add($"{endpoint.EndpointName} heartbeat is stale (last seen {age.TotalSeconds:F0}s ago)");
                 data[endpoint.EndpointName] = "Stale";
@@ -64,37 +67,13 @@ sealed class EndpointsHealthCheck(
 
         return problems.Count > 0
             ? new HealthCheckResult(context.Registration.FailureStatus, string.Join(", ", problems), data: data)
-            : HealthCheckResult.Healthy($"All {endpoints.Count} endpoint(s) ready.", data);
+            : HealthCheckResult.Healthy(
+                $"All {endpoints.Count} endpoint(s) {(kind == EndpointHealthKind.Liveness ? "live" : "ready")}.",
+                data);
     }
 
-    // Liveness: an endpoint is dead only if it Stopped or its heartbeat went stale. Starting and
-    // Ready (with a fresh or absent heartbeat) are alive. No endpoints yet is alive too — the
-    // process is still booting, not wedged; the readiness/startup probe covers never-starting.
-    static HealthCheckResult EvaluateLiveness(IReadOnlyCollection<EndpointStatus> endpoints, DateTimeOffset now, HealthCheckContext context)
-    {
-        var data = new Dictionary<string, object>(endpoints.Count);
-        var problems = new List<string>();
-
-        foreach (var endpoint in endpoints)
-        {
-            if (endpoint.State == EndpointReadinessState.Stopped)
-            {
-                problems.Add($"{endpoint.EndpointName} is Stopped");
-                data[endpoint.EndpointName] = endpoint.State.ToString();
-            }
-            else if (endpoint.IsHeartbeatStale(now, out var age))
-            {
-                problems.Add($"{endpoint.EndpointName} heartbeat is stale (last seen {age.TotalSeconds:F0}s ago)");
-                data[endpoint.EndpointName] = "Stale";
-            }
-            else
-            {
-                data[endpoint.EndpointName] = endpoint.State.ToString();
-            }
-        }
-
-        return problems.Count > 0
-            ? new HealthCheckResult(context.Registration.FailureStatus, string.Join(", ", problems), data: data)
-            : HealthCheckResult.Healthy($"All {endpoints.Count} endpoint(s) live.", data);
-    }
+    bool IsProblemState(EndpointReadinessState state) =>
+        kind == EndpointHealthKind.Liveness
+            ? state == EndpointReadinessState.Stopped
+            : state != EndpointReadinessState.Ready;
 }

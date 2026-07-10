@@ -44,12 +44,14 @@ sealed class EndpointHeartbeatStartupTask(
 
     protected override async Task OnStop(IMessageSession session, CancellationToken cancellationToken)
     {
-        await stopping.CancelAsync();
+        await stopping.CancelAsync().ConfigureAwait(false);
         if (loop is not null)
         {
             try
             {
-                await loop;
+                // WaitAsync ties the wait to the host's shutdown token, so a send that ignores
+                // cancellation cannot block shutdown indefinitely.
+                await loop.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -62,8 +64,9 @@ sealed class EndpointHeartbeatStartupTask(
     async Task RunAsync(IMessageSession session, CancellationToken cancellationToken)
     {
         var message = new EndpointHeartbeat { EndpointName = endpointName, StaleAfterTicks = settings.ResolvedStaleAfter.Ticks };
+        var timeProvider = serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
 
-        using var timer = new PeriodicTimer(settings.ResolvedInterval);
+        using var timer = new PeriodicTimer(settings.ResolvedInterval, timeProvider);
         while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
         {
             try

@@ -159,6 +159,23 @@ public class EndpointsHealthCheckTests
     }
 
     [Fact]
+    public async Task Liveness_is_healthy_while_starting_even_with_a_stale_seeded_heartbeat()
+    {
+        // A long warm-up must never trip the liveness probe: the pump is not open during Starting,
+        // so the seeded heartbeat cannot be refreshed and would otherwise read as stale.
+        var time = new TestTimeProvider(Now);
+        var report = await RunLivenessAsync(registry =>
+        {
+            registry.Report("Sales", EndpointReadinessState.Starting);
+            registry.ReportHeartbeat("Sales", TimeSpan.FromSeconds(30));
+            time.Advance(TimeSpan.FromMinutes(5));   // warm-up takes far longer than StaleAfter
+        }, time);
+
+        Assert.Equal(HealthStatus.Healthy, report.Status);
+        Assert.Equal("Starting", report.Entries[HealthChecksBuilderExtensions.LivenessName].Data["Sales"]);
+    }
+
+    [Fact]
     public async Task Liveness_is_unhealthy_when_an_endpoint_is_stopped()
     {
         var report = await RunLivenessAsync(registry => registry.Report("Sales", EndpointReadinessState.Stopped));
