@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="NServiceBusContrib.HealthCheck/NServiceBusContrib.HealthCheck.csproj" />
+    <Project Path="NServiceBusContrib.WarmUp/NServiceBusContrib.WarmUp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="NServiceBusContrib.WarmUp.Tests/NServiceBusContrib.WarmUp.Tests.csproj" />
+  </Folder>
+</Solution>

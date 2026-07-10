@@ -1,0 +1,31 @@
+name: CI
+
+# Build and test on every PR and on pushes to main. (Publishing is separate:
+# see publish.yml, which runs on SemVer tags.)
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for MinVer)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build src/NServiceBusContrib.slnx -c Release
+
+      - name: Test
+        run: dotnet test src/NServiceBusContrib.slnx -c Release --no-build
