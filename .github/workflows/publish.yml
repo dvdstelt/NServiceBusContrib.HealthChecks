@@ -16,6 +16,10 @@ name: Publish
 #
 # Trusted publishing (OIDC) - no long-lived API key. nuget.org policy:
 #   Owner: dvdstelt / Repository: NServiceBusContrib.HealthChecks / Workflow: publish.yml
+#
+# After the packages are live on NuGet, a GitHub Release is created for the tag with
+# auto-generated notes, links to both packages, and the .nupkg/.snupkg files attached.
+# A tag with a prerelease suffix (e.g. 1.1.0-beta.1) is marked as a prerelease.
 on:
   push:
     tags:
@@ -92,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: nuget         # required reviewer -> manual approval before the push
     permissions:
-      contents: read
+      contents: write          # create the GitHub Release for the tag
       id-token: write          # OIDC token for trusted publishing
     steps:
       - name: Download packages
@@ -118,3 +122,30 @@ jobs:
           --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
+
+      # Only after the packages are live: create the Release so it never links to a
+      # package that failed to publish. Both packages share the tag version (MinVer lockstep).
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Prerelease tags carry a suffix (1.1.0-beta.1); stable tags do not (1.0.0).
+          case "$TAG" in *-*) prerelease="--prerelease" ;; *) prerelease="" ;; esac
+
+          {
+            echo "### NuGet packages"
+            echo
+            echo "- [NServiceBusContrib.WarmUp $TAG](https://www.nuget.org/packages/NServiceBusContrib.WarmUp/$TAG)"
+            echo "- [NServiceBusContrib.HealthCheck $TAG](https://www.nuget.org/packages/NServiceBusContrib.HealthCheck/$TAG)"
+          } > release-notes.md
+
+          # --generate-notes appends the auto-generated commit/PR changelog after the package links.
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file release-notes.md \
+            --generate-notes \
+            $prerelease \
+            artifacts/*.nupkg artifacts/*.snupkg
