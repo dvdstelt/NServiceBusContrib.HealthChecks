@@ -76,13 +76,15 @@ jobs:
         run: dotnet test src/NServiceBusContrib.slnx -c Release
 
       - name: Pack
-        run: dotnet pack src/NServiceBusContrib.slnx -c Release -o artifacts
+        run: dotnet pack src/NServiceBusContrib.slnx -c Release -o artifacts -p:ContinuousIntegrationBuild=true
 
       - name: Upload packages
         uses: actions/upload-artifact@v4
         with:
           name: packages
-          path: artifacts/*.nupkg
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
           if-no-files-found: error
 
   publish:

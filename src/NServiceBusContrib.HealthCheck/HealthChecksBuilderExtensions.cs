@@ -47,8 +47,8 @@ public static class HealthChecksBuilderExtensions
     /// <summary>
     /// Adds a readiness health check (tagged <see cref="ReadinessTag"/>): healthy only when every
     /// endpoint has completed warm-up (and, where enabled, has a fresh heartbeat). A warming-up
-    /// endpoint is reported not ready, so traffic is gated and — with a Docker
-    /// <c>--start-period</c> — the container shows as <c>starting</c>.
+    /// endpoint is reported not ready, so traffic is gated and, with a Docker
+    /// <c>--start-period</c>, the container shows as <c>starting</c>.
     /// </summary>
     public static IHealthChecksBuilder AddNServiceBusReadiness(
         this IHealthChecksBuilder builder,

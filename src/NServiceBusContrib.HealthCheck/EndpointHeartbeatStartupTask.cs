@@ -20,14 +20,14 @@ sealed class EndpointHeartbeatStartupTask(
     readonly CancellationTokenSource stopping = new();
     Task? loop;
 
-    protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken)
+    protected override Task OnStart(IMessageSession session, CancellationToken cancellationToken = default)
     {
         var registry = serviceProvider.GetService<IEndpointStatusRegistry>();
         if (registry is null)
         {
             // Nothing consumes heartbeats without a status registry (no NServiceBusContrib health
-            // checks registered), so don't send any. Register the checks — or call
-            // AddNServiceBusWarmUp() — to activate liveness.
+            // checks registered), so don't send any. Register the checks (or call
+            // AddNServiceBusWarmUp()) to activate liveness.
             logger?.LogWarning(
                 "Liveness heartbeat is enabled for endpoint '{EndpointName}' but no status registry is registered; heartbeats will not be sent.",
                 endpointName);
@@ -42,17 +42,20 @@ sealed class EndpointHeartbeatStartupTask(
         return Task.CompletedTask;
     }
 
-    protected override async Task OnStop(IMessageSession session, CancellationToken cancellationToken)
+    protected override async Task OnStop(IMessageSession session, CancellationToken cancellationToken = default)
     {
-        await stopping.CancelAsync();
+        await stopping.CancelAsync().ConfigureAwait(false);
         if (loop is not null)
         {
             try
             {
-                await loop;
+                // WaitAsync ties the wait to the host's shutdown token, so a send that ignores
+                // cancellation cannot block shutdown indefinitely.
+                await loop.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                // The host's shutdown token cut the wait short; abandon the loop.
             }
         }
 
@@ -62,28 +65,37 @@ sealed class EndpointHeartbeatStartupTask(
     async Task RunAsync(IMessageSession session, CancellationToken cancellationToken)
     {
         var message = new EndpointHeartbeat { EndpointName = endpointName, StaleAfterTicks = settings.ResolvedStaleAfter.Ticks };
+        var timeProvider = serviceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
 
-        using var timer = new PeriodicTimer(settings.ResolvedInterval);
-        while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+        using var timer = new PeriodicTimer(settings.ResolvedInterval, timeProvider);
+        try
         {
-            try
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
-                // Send to this endpoint's own queue (like SendLocal) but stamp a header so the
-                // audit filter can keep the heartbeat out of the audit queue.
-                var options = new SendOptions();
-                options.RouteToThisEndpoint();
-                options.SetHeader(EndpointHeartbeat.HeaderKey, bool.TrueString);
-                await session.Send(message, options, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    // Send to this endpoint's own queue (like SendLocal) but stamp a header so the
+                    // audit filter can keep the heartbeat out of the audit queue.
+                    var options = new SendOptions();
+                    options.RouteToThisEndpoint();
+                    options.SetHeader(EndpointHeartbeat.HeaderKey, bool.TrueString);
+                    await session.Send(message, options, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    // A failed heartbeat send is not fatal; the endpoint will go stale if it keeps failing.
+                    logger?.LogWarning(ex, "Failed to send heartbeat for endpoint '{EndpointName}'.", endpointName);
+                }
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception ex)
-            {
-                // A failed heartbeat send is not fatal; the endpoint will go stale if it keeps failing.
-                logger?.LogWarning(ex, "Failed to send heartbeat for endpoint '{EndpointName}'.", endpointName);
-            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // OnStop signalled the stop; the loop completes instead of faulting, so OnStop's await
+            // of this task only ever observes the host's own shutdown token.
         }
     }
 }

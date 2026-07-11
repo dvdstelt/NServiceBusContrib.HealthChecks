@@ -9,18 +9,19 @@ public class EndpointsHealthCheckTests
 {
     static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
-    static Task<HealthReport> RunAsync(Action<IEndpointStatusRegistry> arrange, TimeProvider? timeProvider = null) =>
-        RunCoreAsync(arrange, b => b.AddNServiceBus(), timeProvider);
+    static Task<HealthReport> RunAsync(Action<IEndpointStatusRegistry> arrange, CancellationToken cancellationToken, TimeProvider? timeProvider = null) =>
+        RunCoreAsync(arrange, b => b.AddNServiceBus(), cancellationToken, timeProvider);
 
-    static Task<HealthReport> RunReadinessAsync(Action<IEndpointStatusRegistry> arrange, TimeProvider? timeProvider = null) =>
-        RunCoreAsync(arrange, b => b.AddNServiceBusReadiness(), timeProvider);
+    static Task<HealthReport> RunReadinessAsync(Action<IEndpointStatusRegistry> arrange, CancellationToken cancellationToken, TimeProvider? timeProvider = null) =>
+        RunCoreAsync(arrange, b => b.AddNServiceBusReadiness(), cancellationToken, timeProvider);
 
-    static Task<HealthReport> RunLivenessAsync(Action<IEndpointStatusRegistry> arrange, TimeProvider? timeProvider = null) =>
-        RunCoreAsync(arrange, b => b.AddNServiceBusLiveness(), timeProvider);
+    static Task<HealthReport> RunLivenessAsync(Action<IEndpointStatusRegistry> arrange, CancellationToken cancellationToken, TimeProvider? timeProvider = null) =>
+        RunCoreAsync(arrange, b => b.AddNServiceBusLiveness(), cancellationToken, timeProvider);
 
     static async Task<HealthReport> RunCoreAsync(
         Action<IEndpointStatusRegistry> arrange,
         Action<IHealthChecksBuilder> register,
+        CancellationToken cancellationToken,
         TimeProvider? timeProvider = null,
         Func<HealthCheckRegistration, bool>? predicate = null)
     {
@@ -38,8 +39,8 @@ public class EndpointsHealthCheckTests
 
         var healthChecks = provider.GetRequiredService<HealthCheckService>();
         return predicate is null
-            ? await healthChecks.CheckHealthAsync()
-            : await healthChecks.CheckHealthAsync(predicate);
+            ? await healthChecks.CheckHealthAsync(cancellationToken)
+            : await healthChecks.CheckHealthAsync(predicate, cancellationToken);
     }
 
     // ---- Combined check (AddNServiceBus == readiness semantics) ----
@@ -47,7 +48,7 @@ public class EndpointsHealthCheckTests
     [Fact]
     public async Task Unhealthy_when_no_endpoints_have_started()
     {
-        var report = await RunAsync(_ => { });
+        var report = await RunAsync(_ => { }, CancellationToken.None);
         Assert.Equal(HealthStatus.Unhealthy, report.Status);
     }
 
@@ -58,7 +59,7 @@ public class EndpointsHealthCheckTests
         {
             registry.Report("Sales", EndpointReadinessState.Ready);
             registry.Report("Billing", EndpointReadinessState.Ready);
-        });
+        }, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Healthy, report.Status);
     }
@@ -70,7 +71,7 @@ public class EndpointsHealthCheckTests
         {
             registry.Report("Sales", EndpointReadinessState.Ready);
             registry.Report("Billing", EndpointReadinessState.Stopped);
-        });
+        }, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, report.Status);
 
@@ -88,7 +89,7 @@ public class EndpointsHealthCheckTests
             registry.Report("Sales", EndpointReadinessState.Ready);
             registry.ReportHeartbeat("Sales", TimeSpan.FromSeconds(30));
             time.Advance(TimeSpan.FromSeconds(20));
-        }, time);
+        }, CancellationToken.None, time);
 
         Assert.Equal(HealthStatus.Healthy, report.Status);
     }
@@ -102,7 +103,7 @@ public class EndpointsHealthCheckTests
             registry.Report("Sales", EndpointReadinessState.Ready);
             registry.ReportHeartbeat("Sales", TimeSpan.FromSeconds(30));
             time.Advance(TimeSpan.FromSeconds(31));
-        }, time);
+        }, CancellationToken.None, time);
 
         Assert.Equal(HealthStatus.Unhealthy, report.Status);
         Assert.Equal("Stale", report.Entries[HealthChecksBuilderExtensions.DefaultName].Data["Sales"]);
@@ -112,7 +113,7 @@ public class EndpointsHealthCheckTests
     public async Task Ready_endpoint_without_heartbeat_tracking_stays_healthy()
     {
         // No heartbeat reported: liveness is simply not evaluated for this endpoint.
-        var report = await RunAsync(registry => registry.Report("Sales", EndpointReadinessState.Ready));
+        var report = await RunAsync(registry => registry.Report("Sales", EndpointReadinessState.Ready), CancellationToken.None);
         Assert.Equal(HealthStatus.Healthy, report.Status);
     }
 
@@ -121,7 +122,7 @@ public class EndpointsHealthCheckTests
     [Fact]
     public async Task Readiness_is_unhealthy_while_an_endpoint_is_starting()
     {
-        var report = await RunReadinessAsync(registry => registry.Report("Sales", EndpointReadinessState.Starting));
+        var report = await RunReadinessAsync(registry => registry.Report("Sales", EndpointReadinessState.Starting), CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, report.Status);
         Assert.Equal("Starting", report.Entries[HealthChecksBuilderExtensions.ReadinessName].Data["Sales"]);
@@ -133,6 +134,7 @@ public class EndpointsHealthCheckTests
         var report = await RunCoreAsync(
             registry => registry.Report("Sales", EndpointReadinessState.Ready),
             builder => builder.AddNServiceBusReadiness(tags: ["custom"]),
+            CancellationToken.None,
             predicate: r => r.Tags.Contains(HealthChecksBuilderExtensions.ReadinessTag));
 
         // Filtering on the canonical "ready" tag still finds the check despite the custom tag.
@@ -145,7 +147,7 @@ public class EndpointsHealthCheckTests
     [Fact]
     public async Task Liveness_is_healthy_while_an_endpoint_is_starting()
     {
-        var report = await RunLivenessAsync(registry => registry.Report("Sales", EndpointReadinessState.Starting));
+        var report = await RunLivenessAsync(registry => registry.Report("Sales", EndpointReadinessState.Starting), CancellationToken.None);
 
         Assert.Equal(HealthStatus.Healthy, report.Status);
         Assert.Equal("Starting", report.Entries[HealthChecksBuilderExtensions.LivenessName].Data["Sales"]);
@@ -154,14 +156,31 @@ public class EndpointsHealthCheckTests
     [Fact]
     public async Task Liveness_is_healthy_when_no_endpoints_have_started()
     {
-        var report = await RunLivenessAsync(_ => { });
+        var report = await RunLivenessAsync(_ => { }, CancellationToken.None);
         Assert.Equal(HealthStatus.Healthy, report.Status);
+    }
+
+    [Fact]
+    public async Task Liveness_is_healthy_while_starting_even_with_a_stale_seeded_heartbeat()
+    {
+        // A long warm-up must never trip the liveness probe: the pump is not open during Starting,
+        // so the seeded heartbeat cannot be refreshed and would otherwise read as stale.
+        var time = new TestTimeProvider(Now);
+        var report = await RunLivenessAsync(registry =>
+        {
+            registry.Report("Sales", EndpointReadinessState.Starting);
+            registry.ReportHeartbeat("Sales", TimeSpan.FromSeconds(30));
+            time.Advance(TimeSpan.FromMinutes(5));   // warm-up takes far longer than StaleAfter
+        }, CancellationToken.None, time);
+
+        Assert.Equal(HealthStatus.Healthy, report.Status);
+        Assert.Equal("Starting", report.Entries[HealthChecksBuilderExtensions.LivenessName].Data["Sales"]);
     }
 
     [Fact]
     public async Task Liveness_is_unhealthy_when_an_endpoint_is_stopped()
     {
-        var report = await RunLivenessAsync(registry => registry.Report("Sales", EndpointReadinessState.Stopped));
+        var report = await RunLivenessAsync(registry => registry.Report("Sales", EndpointReadinessState.Stopped), CancellationToken.None);
         Assert.Equal(HealthStatus.Unhealthy, report.Status);
     }
 
@@ -174,7 +193,7 @@ public class EndpointsHealthCheckTests
             registry.Report("Sales", EndpointReadinessState.Ready);
             registry.ReportHeartbeat("Sales", TimeSpan.FromSeconds(30));
             time.Advance(TimeSpan.FromSeconds(31));
-        }, time);
+        }, CancellationToken.None, time);
 
         Assert.Equal(HealthStatus.Unhealthy, report.Status);
         Assert.Equal("Stale", report.Entries[HealthChecksBuilderExtensions.LivenessName].Data["Sales"]);
@@ -187,7 +206,7 @@ public class EndpointsHealthCheckTests
         {
             registry.Report("Sales", EndpointReadinessState.Starting);
             registry.Report("Billing", EndpointReadinessState.Ready);
-        });
+        }, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Healthy, report.Status);
     }
@@ -199,7 +218,7 @@ public class EndpointsHealthCheckTests
         {
             registry.Report("Sales", EndpointReadinessState.Stopped);
             registry.Report("Billing", EndpointReadinessState.Ready);
-        });
+        }, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, report.Status);
     }
@@ -208,7 +227,7 @@ public class EndpointsHealthCheckTests
     public async Task Liveness_ready_without_heartbeat_tracking_is_healthy()
     {
         // Never having sent a heartbeat is not "dead".
-        var report = await RunLivenessAsync(registry => registry.Report("Sales", EndpointReadinessState.Ready));
+        var report = await RunLivenessAsync(registry => registry.Report("Sales", EndpointReadinessState.Ready), CancellationToken.None);
         Assert.Equal(HealthStatus.Healthy, report.Status);
     }
 
@@ -225,13 +244,13 @@ public class EndpointsHealthCheckTests
             builder.AddNServiceBusLiveness();
         };
 
-        var ready = await RunCoreAsync(arrange, registerBoth,
+        var ready = await RunCoreAsync(arrange, registerBoth, CancellationToken.None,
             predicate: r => r.Tags.Contains(HealthChecksBuilderExtensions.ReadinessTag));
         Assert.Equal(HealthStatus.Unhealthy, ready.Status);
         Assert.True(ready.Entries.ContainsKey(HealthChecksBuilderExtensions.ReadinessName));
         Assert.False(ready.Entries.ContainsKey(HealthChecksBuilderExtensions.LivenessName));
 
-        var live = await RunCoreAsync(arrange, registerBoth,
+        var live = await RunCoreAsync(arrange, registerBoth, CancellationToken.None,
             predicate: r => r.Tags.Contains(HealthChecksBuilderExtensions.LivenessTag));
         Assert.Equal(HealthStatus.Healthy, live.Status);
         Assert.True(live.Entries.ContainsKey(HealthChecksBuilderExtensions.LivenessName));

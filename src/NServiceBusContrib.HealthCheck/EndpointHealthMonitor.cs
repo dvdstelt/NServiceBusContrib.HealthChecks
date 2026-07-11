@@ -7,7 +7,7 @@ namespace NServiceBusContrib.HealthCheck;
 /// Optional background service that periodically evaluates endpoint health and logs transitions via
 /// <see cref="EndpointHealthLog"/>. Unlike the in-check logging, it runs even when nothing is
 /// probing <c>/health</c>, so a hung endpoint (stale heartbeat) is detected on its own.
-/// Enabled with <see cref="HealthMonitorServiceCollectionExtensions.AddNServiceBusEndpointHealthMonitor"/>.
+/// Enabled with <see cref="HealthMonitorServiceCollectionExtensions.AddNServiceBusHealthMonitor"/>.
 /// </summary>
 sealed class EndpointHealthMonitor(
     IEndpointStatusRegistry registry,
@@ -15,7 +15,7 @@ sealed class EndpointHealthMonitor(
     EndpointHealthLog healthLog,
     TimeSpan interval) : BackgroundService
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         using var timer = new PeriodicTimer(interval, timeProvider);
         try
@@ -24,9 +24,9 @@ sealed class EndpointHealthMonitor(
             {
                 healthLog.Evaluate(registry.GetAll(), timeProvider.GetUtcNow());
             }
-            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false));
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false));
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             // shutting down
         }

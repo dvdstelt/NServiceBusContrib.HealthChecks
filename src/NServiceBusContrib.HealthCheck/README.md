@@ -14,9 +14,9 @@ builder.Services
 app.MapHealthChecks("/health");
 ```
 
-- **Healthy** — every endpoint has completed warm-up and (where heartbeat
+- **Healthy**: every endpoint has completed warm-up and (where heartbeat
   liveness is enabled) has a fresh heartbeat.
-- **Unhealthy** — at least one endpoint is still starting, has stopped, or its
+- **Unhealthy**: at least one endpoint is still starting, has stopped, or its
   heartbeat has gone stale.
 
 Readiness is driven by **NServiceBusContrib.WarmUp**, so enable warm-up on each
@@ -45,7 +45,7 @@ app.MapHealthChecks("/health/live",  new() { Predicate = r => r.Tags.Contains("l
 
 Kubernetes: point `startupProbe` + `readinessProbe` at `/health/ready` and
 `livenessProbe` at `/health/live`. Docker: one `HEALTHCHECK --start-period=...`
-at `/health/ready` (or `/health`) — Docker's `starting` state comes from the
+at `/health/ready` (or `/health`); Docker's `starting` state comes from the
 start period. See [docs/healthcheck.md](../../docs/healthcheck.md) for full
 probe examples.
 
@@ -78,5 +78,5 @@ on by default and logged when a health check runs (on a probe). To log transitio
 even without probes, add the optional background monitor:
 
 ```csharp
-builder.Services.AddNServiceBusEndpointHealthMonitor();   // polls every 30s (configurable)
+builder.Services.AddNServiceBusHealthMonitor();   // polls every 30s (configurable)
 ```

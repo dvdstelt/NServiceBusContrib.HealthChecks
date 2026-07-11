@@ -48,7 +48,7 @@ public class HeartbeatIntegrationTests
         {
             // The start seeds one heartbeat; counts beyond that prove the pump actually
             // received and handled heartbeat messages.
-            await WaitForAsync(() => registry.HeartbeatCount >= 2, TimeSpan.FromSeconds(15));
+            await WaitForAsync(() => registry.HeartbeatCount >= 2, TimeSpan.FromSeconds(15), CancellationToken.None);
 
             Assert.True(registry.HeartbeatCount >= 2, $"expected at least 2 heartbeats, observed {registry.HeartbeatCount}");
             Assert.Contains(registry.GetAll(), e =>
@@ -95,7 +95,7 @@ public class HeartbeatIntegrationTests
         {
             // Make sure heartbeats were actually processed, so "nothing audited" is not vacuous
             // (the seed is 1; >= 3 means at least two heartbeats round-tripped through the pump).
-            await WaitForAsync(() => registry.HeartbeatCount >= 3, TimeSpan.FromSeconds(15));
+            await WaitForAsync(() => registry.HeartbeatCount >= 3, TimeSpan.FromSeconds(15), CancellationToken.None);
             Assert.True(registry.HeartbeatCount >= 3, $"expected heartbeats to be processed, observed {registry.HeartbeatCount}");
         }
         finally
@@ -148,12 +148,12 @@ public class HeartbeatIntegrationTests
         // status registry consumes it (the sender is never started; OnStop handles the null loop).
     }
 
-    static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
+    static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var deadline = DateTime.UtcNow + timeout;
         while (!condition() && DateTime.UtcNow < deadline)
         {
-            await Task.Delay(100);
+            await Task.Delay(100, cancellationToken);
         }
     }
 

@@ -17,7 +17,7 @@ public class EndpointHealthLogTests
         var logger = new ListLogger<EndpointHealthLog>();
         var log = new EndpointHealthLog(logger);
 
-        log.Evaluate([Endpoint("Sales", EndpointReadinessState.Ready)], Now);      // healthy — nothing
+        log.Evaluate([Endpoint("Sales", EndpointReadinessState.Ready)], Now);      // healthy: nothing
         log.Evaluate([Endpoint("Sales", EndpointReadinessState.Stopped)], Now);    // -> warning
 
         var entry = Assert.Single(logger.Entries);
@@ -49,7 +49,7 @@ public class EndpointHealthLogTests
         var log = new EndpointHealthLog(logger);
         var endpoint = Endpoint("Sales", EndpointReadinessState.Ready, heartbeat: Now, staleAfter: TimeSpan.FromSeconds(30));
 
-        log.Evaluate([endpoint], Now.AddSeconds(20));   // within window — healthy
+        log.Evaluate([endpoint], Now.AddSeconds(20));   // within window: healthy
         log.Evaluate([endpoint], Now.AddSeconds(31));   // stale -> warning
 
         var entry = Assert.Single(logger.Entries);
@@ -65,6 +65,19 @@ public class EndpointHealthLogTests
 
         log.Evaluate([Endpoint("Sales", EndpointReadinessState.Starting)], Now);
         log.Evaluate([Endpoint("Sales", EndpointReadinessState.Ready)], Now);
+
+        Assert.Empty(logger.Entries);
+    }
+
+    [Fact]
+    public void Does_not_warn_for_starting_with_a_stale_seeded_heartbeat()
+    {
+        // A slow warm-up is normal, not an incident: staleness only counts once the endpoint is Ready.
+        var logger = new ListLogger<EndpointHealthLog>();
+        var log = new EndpointHealthLog(logger);
+        var endpoint = Endpoint("Sales", EndpointReadinessState.Starting, heartbeat: Now, staleAfter: TimeSpan.FromSeconds(30));
+
+        log.Evaluate([endpoint], Now.AddMinutes(5));
 
         Assert.Empty(logger.Entries);
     }

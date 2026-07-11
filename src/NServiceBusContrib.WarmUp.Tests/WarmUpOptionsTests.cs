@@ -51,7 +51,7 @@ public class WarmUpOptionsTests
 
     sealed class RecordingTask(List<string> order) : IWarmUpTask
     {
-        public Task WarmUpAsync(CancellationToken cancellationToken)
+        public Task WarmUpAsync(CancellationToken cancellationToken = default)
         {
             order.Add("third");
             return Task.CompletedTask;
@@ -62,7 +62,7 @@ public class WarmUpOptionsTests
     {
         public bool Ran { get; private set; }
 
-        public Task WarmUpAsync(CancellationToken cancellationToken)
+        public Task WarmUpAsync(CancellationToken cancellationToken = default)
         {
             Ran = true;
             return Task.CompletedTask;

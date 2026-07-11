@@ -3,9 +3,9 @@
 Two related add-ons that work together to make an NServiceBus host behave well in
 a container:
 
-- **NServiceBusContrib.WarmUp** — block message processing until user-defined
+- **NServiceBusContrib.WarmUp**: block message processing until user-defined
   warm-up actions complete.
-- **NServiceBusContrib.HealthCheck** — expose a single `/health` endpoint that
+- **NServiceBusContrib.HealthCheck**: expose a single `/health` endpoint that
   aggregates the readiness (and liveness) of every NServiceBus endpoint in the
   process.
 
@@ -83,10 +83,10 @@ The shared state both packages touch is `IEndpointStatusRegistry` (in `WarmUp`):
 
 ## Status / phasing
 
-- **Phase 1** — warm-up feature, readiness registry, aggregate `/health`.
-- **Phase 2** — heartbeat liveness (stale heartbeat ⇒ unhealthy even without a
+- **Phase 1**: warm-up feature, readiness registry, aggregate `/health`.
+- **Phase 2**: heartbeat liveness (stale heartbeat ⇒ unhealthy even without a
   clean stop).
-- **Phase 3** — readiness vs liveness split via health-check tags, so a
+- **Phase 3**: readiness vs liveness split via health-check tags, so a
   warming-up endpoint is reported alive-but-not-ready (`/health/ready` +
   `/health/live`, mapping onto Docker `--start-period` and the Kubernetes
   startup/readiness/liveness probes). See [healthcheck.md](healthcheck.md).
